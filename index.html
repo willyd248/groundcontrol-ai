@@ -7,13 +7,14 @@
 <meta name="description" content="Real-time AI dispatch simulation of JFK Terminal 4 ground operations. Autonomous vehicles, runway safety monitoring, and live turnaround analytics.">
 <meta property="og:title" content="GroundControl AI — Airport Ground Operations">
 <meta property="og:description" content="Real-time AI dispatch simulation of JFK Terminal 4. Watch autonomous vehicles navigate gates, runways, and service areas with live runway safety monitoring.">
-<meta property="og:image" content="https://groundcontrol-ai.vercel.app/og-image.svg">
+<meta property="og:image" content="https://groundcontrol-ai.vercel.app/og-image.png">
 <meta property="og:url" content="https://groundcontrol-ai.vercel.app">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="GroundControl AI — Airport Ground Operations">
 <meta name="twitter:description" content="Real-time AI dispatch simulation of JFK Terminal 4. Autonomous vehicles, runway safety, live analytics.">
-<meta name="twitter:image" content="https://groundcontrol-ai.vercel.app/og-image.svg">
+<meta name="twitter:image" content="https://groundcontrol-ai.vercel.app/og-image.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23020403'/><circle cx='16' cy='16' r='11' fill='none' stroke='%2300ff41' stroke-width='1.5'/><circle cx='16' cy='16' r='6' fill='none' stroke='%2300ff41' stroke-width='.8' opacity='.5'/><line x1='16' y1='5' x2='16' y2='27' stroke='%2300ff41' stroke-width='.8' opacity='.4'/><line x1='5' y1='16' x2='27' y2='16' stroke='%2300ff41' stroke-width='.8' opacity='.4'/><line x1='16' y1='16' x2='25' y2='10' stroke='%2300ff41' stroke-width='1.5' opacity='.9'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#020403;--bg2:#040604;--bg3:#070a07;--border:rgba(0,255,65,0.1);--t1:#a8ffa8;--t2:#4a7a4a;--t3:#2a4a2a;--blue:#00ccff;--green:#00ff41;--amber:#FFB000;--red:#FF4444;--purple:#cc99ff;--cyan:#00ffdd;--mono:'JetBrains Mono',monospace;--sans:'JetBrains Mono',monospace}
@@ -26,6 +27,8 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 #kpi{position:absolute;bottom:0;left:0;right:0;height:48px;background:rgba(2,4,3,.98);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 20px;font-family:var(--mono);z-index:5;backdrop-filter:blur(8px)}
 
 .ps{flex:1;min-height:0;display:flex;flex-direction:column}
+#dsp{flex:3}
+#flp{flex:2}
 .ps+.ps{border-top:1px solid var(--border)}
 .ph{padding:12px 16px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.06)}
 .pt{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--t2);display:flex;align-items:center;gap:8px}
@@ -52,6 +55,7 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 .de .dt{color:var(--t3);flex-shrink:0;font-size:10px}
 .de .di{flex-shrink:0;font-size:9px}
 .de .dx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.de.ai-opt .dx{white-space:normal;overflow:visible;text-overflow:clip}
 .de .dg{flex-shrink:0;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;letter-spacing:.3px}
 .dg.a{background:rgba(0,255,65,.08);color:#00ff41;border:1px solid rgba(0,255,65,.2)}
 .dg.c{background:rgba(0,255,65,.06);color:#a8ffa8;border:1px solid rgba(0,255,65,.15)}
@@ -85,6 +89,9 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 .kv{font-size:13px;font-weight:600;color:var(--t1);font-variant-numeric:tabular-nums;min-width:20px;transition:color .3s}
 .kv.al{color:var(--red);text-shadow:0 0 6px rgba(255,68,68,0.5)}
 .kc{margin-left:auto;font-size:11px;color:var(--t2);font-weight:500;letter-spacing:.5px}
+#pause-btn{background:none;border:1px solid rgba(0,255,65,0.2);color:var(--t2);font-family:var(--mono);font-size:9px;padding:2px 10px;border-radius:2px;cursor:pointer;letter-spacing:.5px;margin-left:16px}
+#pause-btn:hover{color:var(--t1);border-color:rgba(0,255,65,0.4)}
+#pause-btn.paused{color:var(--amber);border-color:rgba(255,176,0,0.4)}
 
 #vc{position:absolute;bottom:16px;right:8px;width:270px;background:rgba(2,4,3,.98);border:1px solid rgba(0,255,65,.2);border-radius:2px;padding:16px;z-index:1000;display:none;backdrop-filter:blur(12px);box-shadow:0 0 20px rgba(0,255,65,.05),inset 0 0 40px rgba(0,255,65,.02)}
 .vh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
@@ -99,7 +106,7 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 .vht{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--t3);margin-bottom:6px}
 .vhi{font-family:var(--mono);font-size:10px;color:var(--t3);padding:2px 0}
 
-#emb{position:absolute;top:0;left:0;right:0;height:40px;background:rgba(180,0,0,0.9);display:none;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#ff8888;z-index:20;letter-spacing:1px;border-bottom:1px solid rgba(255,68,68,.5)}
+#emb{position:absolute;bottom:0;left:0;right:0;height:40px;background:rgba(180,0,0,0.9);display:none;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#ff8888;z-index:20;letter-spacing:1px;border-top:1px solid rgba(255,68,68,.5)}
 #map-wrap.emergency{box-shadow:inset 0 0 80px rgba(255,68,68,0.1)}
 
 /* ── Onboarding Overlay ── */
@@ -208,6 +215,7 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
   <div class="kd"></div><div class="ki"><span class="kl">Violations</span><span class="kv" id="kvl">0</span></div>
   <div class="kd"></div><div class="ki"><span class="kl">Turnaround Avg</span><span class="kv" id="kta">--:--</span></div>
   <div class="kc" id="kcl">--:--:-- EST</div>
+  <button id="pause-btn" title="Space to pause/resume">⏸ PAUSE</button>
 </div>
 
 <script>
@@ -293,6 +301,7 @@ let simT=0,dispCD=DISP_INT,selId=null;
 let vehs={},gateS={};
 let inboundQ=[],dispLog=[],turnTimes=[];
 let emActive=false,emTimer=0,nextEm=EM_FIRST;
+let sweepAngle=0,simPaused=false;
 let aiIdx=0,flNum=100;
 
 // ── Runway Safety System state ──
@@ -396,7 +405,8 @@ function moveRoute(v){
   if(d<0.5){v.ri++;return false}
   const last=v.ri===v.route.length-2;
   const spd=v.state==='EMERGENCY'?ARFF_SPD:(last&&v.rp>0.6)?SLOW_SPD:MOVE_SPD;
-  v.speed=spd*0.67;v.rp+=spd/d;
+  v.speed=spd; // raw sim units; displayed as mph via *15 in updCard
+  v.rp+=spd/d;
   if(v.rp>=1){v.pos=[...t];v.rp=0;v.ri++;return v.ri>=v.route.length-1}
   v.pos=lerp2(f,t,v.rp);v.heading=Math.atan2(t[1]-f[1],t[0]-f[0]);
   return false;
@@ -511,6 +521,7 @@ function findIdle(type,gid){
 // INBOUND, DISPATCH, EMERGENCY (identical)
 // ═══════════════════════════════════════════════════
 function tickInbound(){
+  inboundQ=inboundQ.filter(q=>q.eta>-5);
   while(inboundQ.length<2){const al=nxtAl(),fl=nxtFl(al);const eta=120+Math.random()*180;inboundQ.push({flight:fl,color:al.color,eta,maxEta:eta,gate:null})}
   inboundQ.forEach(q=>{q.eta-=TICK/1000});
   inboundQ.forEach(q=>{if(!q.gate){const empty=ACTIVE_GATES.find(gid=>{const gs=gateS[gid];return gs.state==='EMPTY'&&gs.nextArr>0&&!inboundQ.some(iq=>iq.gate===gid&&iq!==q)});if(empty)q.gate=empty}});
@@ -591,9 +602,9 @@ function tickRunwaySafety(dt){
       if(v.state!=='DISPATCHED'||!v.route||heldVehicles.has(v.id))return;
       const crossesRwy=v.route.some(wp=>wp&&wp[1]<RWY2.y+RWY2.h+10);
       if(crossesRwy){
-        addLog('\u26A0 CONFLICT DETECTED — rerouting '+v.id,'e','CONFLICT');
-        // Reroute: skip waypoints in runway zone (the route already avoids runway for non-ARFF)
-        conflictCooldown=DISP_INT; // one per dispatch cycle
+        addLog('\u26A0 CONFLICT DETECTED — holding '+v.id,'e','CONFLICT');
+        v.state='HOLD';heldVehicles.add(v.id);
+        conflictCooldown=DISP_INT;
       }
     });
     if(conflictCooldown<=0)conflictCooldown=DISP_INT;
@@ -621,7 +632,7 @@ function renderLog(){
   document.getElementById('dl').innerHTML=dispLog.slice(0,26).map((e,i)=>{
     const ic=e.type==='c'?'✓':e.type==='v'||e.type==='e'?'⚠':e.type==='w'?'●':'▶';
     const tc={'a':'var(--blue)','c':'var(--green)','v':'var(--red)','e':'var(--red)','w':'var(--amber)'}[e.type]||'var(--t3)';
-    const emClass=(e.type==='v'||e.type==='e')?' em-row':'';
+    const emClass=(e.type==='v'||e.type==='e')?' em-row':e.tag==='AI OPT'?' ai-opt':'';
     return`<div class="de${emClass}"${i===0?' style="animation:si .2s ease-out"':''}><span class="dt">${e.time}</span><span class="di" style="color:${tc}">${ic}</span><span class="dx">${e.txt}</span><span class="dg ${e.type}">${e.tag}</span></div>`;
   }).join('');
 }
@@ -633,7 +644,7 @@ function renderInbound(){
 }
 function renderFleet(){
   const ac=Object.values(vehs).filter(v=>v.state!=='IDLE').length;
-  document.getElementById('fls').textContent='18 vehicles · '+ac+' active';
+  document.getElementById('fls').textContent=FLEET.length+' vehicles · '+ac+' active';
   const el=document.getElementById('fll');
   el.innerHTML=FLEET.map(id=>{
     const v=vehs[id];if(!v)return'';
@@ -667,7 +678,17 @@ function updCard(){
   document.getElementById('vch').innerHTML=v.hist.length?v.hist.map(h=>`<div class="vhi">✓ Gate ${h.gate}  completed ${fmt(simT-h.t)} ago</div>`).join(''):'<div class="vhi" style="color:var(--t3)">No completed tasks yet</div>';
 }
 document.getElementById('vcx').addEventListener('click',deselect);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')deselect()});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')deselect();
+  if(e.key===' '&&e.target===document.body){e.preventDefault();togglePause();}
+});
+function togglePause(){
+  simPaused=!simPaused;
+  const btn=document.getElementById('pause-btn');
+  btn.textContent=simPaused?'▶ RESUME':'⏸ PAUSE';
+  btn.className=simPaused?'paused':'';
+}
+document.getElementById('pause-btn').addEventListener('click',togglePause);
 function updKPI(){
   const ac=Object.values(vehs).filter(v=>v.state!=='IDLE').length;
   const ag=Object.values(gateS).filter(g=>g.state==='AT_GATE').length;
@@ -685,12 +706,23 @@ function updKPI(){
 // ═══════════════════════════════════════════════════
 // CANVAS CLICK → SELECT VEHICLE
 // ═══════════════════════════════════════════════════
+function hitTest(mx,my,radius){
+  let closest=null,minD=radius;
+  Object.values(vehs).forEach(v=>{const d=Math.hypot(mx-X(v.pos[0]),my-Y(v.pos[1]));if(d<minD){minD=d;closest=v.id}});
+  return closest;
+}
 cv.addEventListener('click',e=>{
   const rect=cv.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;
-  let closest=null,minD=18;
-  Object.values(vehs).forEach(v=>{const d=Math.hypot(mx-X(v.pos[0]),my-Y(v.pos[1]));if(d<minD){minD=d;closest=v.id}});
-  if(closest)selectV(closest);else deselect();
+  const hit=hitTest(mx,my,18);
+  if(hit)selectV(hit);else deselect();
 });
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const touch=e.touches[0],rect=cv.getBoundingClientRect();
+  const mx=touch.clientX-rect.left,my=touch.clientY-rect.top;
+  const hit=hitTest(mx,my,30);
+  if(hit)selectV(hit);else deselect();
+},{passive:false});
 
 // ═══════════════════════════════════════════════════
 // CANVAS RENDER — AIRPORT DIAGRAM
@@ -704,6 +736,39 @@ function render(){
   const gsp=S(40);
   for(let gx=0;gx<CW;gx+=gsp){C.beginPath();C.moveTo(gx,0);C.lineTo(gx,CH);C.stroke()}
   for(let gy=0;gy<CH;gy+=gsp){C.beginPath();C.moveTo(0,gy);C.lineTo(CW,gy);C.stroke()}
+
+  // ── Range rings (concentric) ──
+  const rcx=CW/2,rcy=CH/2;
+  C.setLineDash([S(2),S(6)]);
+  [0.22,0.38,0.54,0.70].forEach((frac,i)=>{
+    const r=Math.min(CW,CH)*frac;
+    C.strokeStyle='rgba(0,255,65,0.07)';C.lineWidth=S(0.6);
+    C.beginPath();C.arc(rcx,rcy,r,0,Math.PI*2);C.stroke();
+    C.font=S(5)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.18)';C.textAlign='left';
+    C.fillText(((i+1)*2)+'nm',rcx+r*0.707+S(2),rcy-r*0.707+S(4));
+  });
+  C.setLineDash([]);
+
+  // ── Radar sweep ──
+  sweepAngle=(sweepAngle+0.006)%(Math.PI*2);
+  const sweepR=Math.max(CW,CH)*0.85;
+  C.save();
+  for(let i=18;i>=0;i--){
+    const a=sweepAngle-i*(Math.PI/90);
+    C.globalAlpha=Math.max(0,(0.09-i*0.005));
+    C.fillStyle='rgba(0,255,65,1)';
+    C.beginPath();C.moveTo(rcx,rcy);
+    C.arc(rcx,rcy,sweepR,a,a+Math.PI/90);
+    C.closePath();C.fill();
+  }
+  C.globalAlpha=0.55;C.strokeStyle='rgba(0,255,65,0.9)';C.lineWidth=S(0.8);
+  C.beginPath();C.moveTo(rcx,rcy);
+  C.lineTo(rcx+Math.cos(sweepAngle)*sweepR,rcy+Math.sin(sweepAngle)*sweepR);C.stroke();
+  C.restore();
+
+  // ICAO + scope ID
+  C.font='bold '+S(6)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.22)';
+  C.textAlign='right';C.fillText('KJFK · ASDE-X SIM',CW-S(6),S(12));
 
   // Apron surface
   const ax=X(APRON.x),ay=Y(APRON.y),aw=X(APRON.x+APRON.w)-ax,ah=Y(APRON.y+APRON.h)-ay;
@@ -727,7 +792,7 @@ function render(){
     C.fillStyle='rgba(0,40,10,0.6)';C.fillRect(rx,ry,rw,rh);
     C.strokeStyle='rgba(0,255,65,0.35)';C.lineWidth=S(0.8);C.strokeRect(rx,ry,rw,rh);
     // Amber centerline (real ground radar uses amber on runways)
-    C.strokeStyle='rgba(255,176,0,0.6)';C.lineWidth=Math.max(1,S(0.8));C.setLineDash([S(10),S(8)]);
+    C.strokeStyle='rgba(255,176,0,0.6)';C.lineWidth=Math.max(1,S(0.8));C.setLineDash(ri===0?[S(10),S(8)]:[S(5),S(5)]);
     C.beginPath();C.moveTo(rx+S(15),ry+rh/2);C.lineTo(rx+rw-S(15),ry+rh/2);C.stroke();C.setLineDash([]);
     // Threshold bars
     C.fillStyle='rgba(255,176,0,0.4)';
@@ -869,8 +934,7 @@ function render(){
       C.shadowColor='#FF4444';C.shadowBlur=flash?S(10):0;
       C.fillRect(sx-hs,sy-hs,hs*2,hs*2);
     }else{
-      C.fillStyle=v.color;C.shadowColor=v.color;C.shadowBlur=isIdle?0:S(6);
-      C.fillRect(sx-hs,sy-hs,hs*2,hs*2);
+      C.fillStyle=v.color;C.fillRect(sx-hs,sy-hs,hs*2,hs*2);
       if(!isIdle){
         const p=0.8+Math.sin(v.wobble)*0.2;C.strokeStyle=v.color;
         C.globalAlpha=0.15*p;C.lineWidth=S(0.8);
@@ -942,6 +1006,15 @@ function render(){
   // Emergency vignette
   if(emActive){const a=0.05+Math.sin(simT*4)*0.02;const gr=C.createRadialGradient(CW/2,CH/2,CW*0.2,CW/2,CH/2,CW*0.7);gr.addColorStop(0,'rgba(255,68,68,0)');gr.addColorStop(1,'rgba(255,68,68,'+a+')');C.fillStyle=gr;C.fillRect(0,0,CW,CH)}
 
+  // Paused overlay
+  if(simPaused){
+    C.fillStyle='rgba(0,0,0,0.35)';C.fillRect(0,0,CW,CH);
+    C.font='bold '+S(14)+'px "JetBrains Mono"';C.fillStyle='rgba(255,176,0,0.9)';
+    C.textAlign='center';C.fillText('⏸ PAUSED',CW/2,CH/2);
+    C.font=S(7)+'px "JetBrains Mono"';C.fillStyle='rgba(255,176,0,0.5)';
+    C.fillText('SPACE or click PAUSE to resume',CW/2,CH/2+S(18));
+  }
+
   requestAnimationFrame(render);
 }
 
@@ -949,6 +1022,7 @@ function render(){
 // SIMULATION TICK
 // ═══════════════════════════════════════════════════
 function simTick(){
+  if(simPaused||document.hidden)return;
   const dt=TICK/1000;simT+=dt;dispCD-=dt;
   Object.values(vehs).forEach(v=>tickV(v,dt));
   Object.values(gateS).forEach(gs=>tickGate(gs,dt));
@@ -957,7 +1031,7 @@ function simTick(){
   if(!emActive&&simT>=nextEm)triggerEm();
   if(emActive){emTimer+=dt;if(emTimer>=EM_DUR)resolveEm()}
 }
-function uiTick(){updKPI();renderFleet();renderInbound();if(selId)updCard()}
+function uiTick(){if(simPaused||document.hidden)return;updKPI();renderFleet();renderInbound();if(selId)updCard()}
 
 // ═══════════════════════════════════════════════════
 // INIT
@@ -1017,7 +1091,7 @@ function init(){
 
   setInterval(simTick,TICK);
   setInterval(uiTick,500);
-  setInterval(()=>{runDispatch();dispCD=DISP_INT},DISP_INT*1000);
+  setInterval(()=>{if(!simPaused&&!document.hidden){runDispatch();dispCD=DISP_INT}},DISP_INT*1000);
   setTimeout(runDispatch,2000);
   requestAnimationFrame(render);
 }
