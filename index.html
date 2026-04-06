@@ -86,7 +86,7 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 .kv.al{color:var(--red);text-shadow:0 0 6px rgba(255,68,68,0.5)}
 .kc{margin-left:auto;font-size:11px;color:var(--t2);font-weight:500;letter-spacing:.5px}
 
-#vc{position:absolute;bottom:16px;left:16px;width:270px;background:rgba(2,4,3,.98);border:1px solid rgba(0,255,65,.2);border-radius:2px;padding:16px;z-index:1000;display:none;backdrop-filter:blur(12px);box-shadow:0 0 20px rgba(0,255,65,.05),inset 0 0 40px rgba(0,255,65,.02)}
+#vc{position:absolute;bottom:16px;right:8px;width:270px;background:rgba(2,4,3,.98);border:1px solid rgba(0,255,65,.2);border-radius:2px;padding:16px;z-index:1000;display:none;backdrop-filter:blur(12px);box-shadow:0 0 20px rgba(0,255,65,.05),inset 0 0 40px rgba(0,255,65,.02)}
 .vh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .vn{font-family:var(--mono);font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;letter-spacing:.5px}
 .vn .vn-dot{width:8px;height:8px;border-radius:50%}
@@ -215,17 +215,19 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 // CANVAS SETUP — fill entire map-wrap, no dead space
 // ═══════════════════════════════════════════════════
 const cv=document.getElementById('cv'), C=cv.getContext('2d'), wrap=document.getElementById('map-wrap');
-let CW,CH,SX,SY;
+let CW,CH,SX,SY,OX=0,OY=0;
 const WW=1200,WH=800;
 function resize(){
   const r=devicePixelRatio||1;CW=wrap.clientWidth;CH=wrap.clientHeight;
   cv.width=CW*r;cv.height=CH*r;cv.style.width=CW+'px';cv.style.height=CH+'px';
-  C.setTransform(r,0,0,r,0,0);SX=CW/WW;SY=CH/WH; // stretch to fill — no letterboxing
+  C.setTransform(r,0,0,r,0,0);
+  const sc=Math.min(CW/WW,CH/WH);
+  SX=sc;SY=sc;OX=(CW-WW*sc)/2;OY=(CH-WH*sc)/2;
 }
 window.addEventListener('resize',resize);resize();
-function X(x){return x*SX}
-function Y(y){return y*SY}
-function S(v){return v*Math.min(SX,SY)}
+function X(x){return x*SX+OX}
+function Y(y){return y*SY+OY}
+function S(v){return v*SX}
 
 // ═══════════════════════════════════════════════════
 // AIRPORT LAYOUT (1200×800 logical, stretched to fill)
@@ -490,9 +492,20 @@ function checkTurn(gid){
 }
 function reqSvc(gid){
   const gs=gateS[gid],need=[...gs.needed];
-  need.forEach(type=>{const v=findIdle(type);if(v){dispatchV(v,gid,v.tname+' · '+gs.ac.flight);gs.assigned.push(v.id);gs.needed=gs.needed.filter(t=>t!==type)}});
+  need.forEach(type=>{const v=findIdle(type,gid);if(v){dispatchV(v,gid,v.tname+' · '+gs.ac.flight);gs.assigned.push(v.id);gs.needed=gs.needed.filter(t=>t!==type)}});
 }
-function findIdle(type){return Object.values(vehs).find(v=>v.type===type&&v.state==='IDLE')}
+function findIdle(type,gid){
+  const idle=Object.values(vehs).filter(v=>v.type===type&&v.state==='IDLE');
+  if(!idle.length)return null;
+  if(!gid||idle.length===1)return idle[0];
+  const gp=GATES[gid].pos;
+  idle.sort((a,b)=>dist(a.pos,gp)-dist(b.pos,gp));
+  const best=idle[0],alt=idle[1];
+  const dBest=dist(best.pos,gp),dAlt=dist(alt.pos,gp);
+  const saves=Math.round((dAlt-dBest)/MOVE_SPD);
+  if(saves>8)addLog('AI: '+best.id+' over '+alt.id+' (saves ~'+saves+'s)','w','AI OPT');
+  return best;
+}
 
 // ═══════════════════════════════════════════════════
 // INBOUND, DISPATCH, EMERGENCY (identical)
@@ -509,7 +522,8 @@ function triggerEm(){
   if(f2){f2.state='VIOLATION';f2.pos=[600,85];f2.gate=null;f2.task=null;f2.route=null;addLog('FUEL-02 entered runway buffer','v','VIOLATION')}
   ['ARFF-01','ARFF-02'].forEach(id=>{const v=vehs[id];if(!v)return;v.state='EMERGENCY';v.route=routeARFF(v.pos);v.ri=0;v.rp=0;addLog(v.id+' → RWY 13L threshold','e','EMERGENCY')});
   addLog('EMERGENCY OVERRIDE — all traffic hold','e','ALERT');addLog('Rerouting ground traffic — runway buffer compromised','e','OVERRIDE');
-  const b=document.getElementById('emb');b.textContent='⚠  EMERGENCY — FUEL-02 RUNWAY INCURSION — ARFF UNITS RESPONDING';b.style.display='flex';
+  const violId=f2?f2.id:'UNKNOWN';
+  const b=document.getElementById('emb');b.textContent='⚠  EMERGENCY — '+violId+' RUNWAY INCURSION — ARFF UNITS RESPONDING';b.style.display='flex';
   document.getElementById('map-wrap').classList.add('emergency');
 }
 function resolveEm(){
@@ -649,7 +663,7 @@ function updCard(){
     `<div class="vr"><span class="vk">Task</span><span class="vv">${ds}</span></div>`+
     `<div class="vr"><span class="vk">Speed</span><span class="vv">${sp} · Heading ${hd}</span></div>`+
     `<div class="vr"><span class="vk">${v.state==='SERVICING'?'Remaining':'ETA'}</span><span class="vv">${eta}</span></div>`+
-    `<div class="vr"><span class="vk">Transponder</span><span class="vv" style="color:${transponderLost===v.id?'var(--red)':'var(--green)'}">${transponderLost===v.id?'⚠ LOST — '+Math.round(transponderLostTimer)+'s':'● ACTIVE — last ping '+(0.2+Math.random()*0.4).toFixed(1)+'s ago'}</span></div>`;
+    `<div class="vr"><span class="vk">Transponder</span><span class="vv" style="color:${transponderLost===v.id?'var(--red)':'var(--green)'}">${transponderLost===v.id?'⚠ LOST — '+Math.round(transponderLostTimer)+'s':'● ACTIVE — last ping '+(0.1+(simT*1.3%0.7)).toFixed(1)+'s ago'}</span></div>`;
   document.getElementById('vch').innerHTML=v.hist.length?v.hist.map(h=>`<div class="vhi">✓ Gate ${h.gate}  completed ${fmt(simT-h.t)} ago</div>`).join(''):'<div class="vhi" style="color:var(--t3)">No completed tasks yet</div>';
 }
 document.getElementById('vcx').addEventListener('click',deselect);
@@ -883,7 +897,7 @@ function render(){
   });
 
   // ── Runway Safety System panel — phosphor green ATC style ──
-  const pnlX=S(10),pnlY=CH-S(108),pnlW=S(198),pnlH=S(92);
+  const pnlX=X(10),pnlY=Y(WH-108),pnlW=S(198),pnlH=S(92);
   C.fillStyle='rgba(2,4,3,0.95)';C.beginPath();C.rect(pnlX,pnlY,pnlW,pnlH);C.fill();
   C.strokeStyle='rgba(0,255,65,0.3)';C.lineWidth=S(0.8);C.beginPath();C.rect(pnlX,pnlY,pnlW,pnlH);C.stroke();
   // Header with top border accent
