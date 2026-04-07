@@ -111,8 +111,39 @@ Both are genuine "new work arrived" events. If a free vehicle already exists for
 
 Detection: track `len(pending_tasks)` before and after each tick. If it grew AND `_has_decision_point()` is True, trigger.
 
-### (c) Disruption event (future extension)
-Vehicle breakdown, gate closure, runway closure would require replanning. Not currently modelled in the sim but the trigger framework should accommodate them.
+### (c) Disruption events that change the assignment problem
+`sim/disruptions.py` (implemented in the `trusting-albattani` worktree, not yet on main) defines four disruption types. Each has different trigger implications:
+
+**`vehicle_breakdown`** — An IDLE vehicle is made unavailable via sentinel `v.assigned_to = "__BREAKDOWN__"`, causing `is_available()` to return False. This directly shrinks the pool of assignable vehicles.
+- **Fires a query when**: the breakdown makes a previously-assignable pending task un-assignable (i.e., the broken vehicle was the last compatible one for some pending task type). The agent needs to know that an assignment it could previously make is now blocked.
+- **Expiry** (vehicle returns to IDLE): already covered by **Event A** — the vehicle transitions to IDLE, and if pending tasks exist for its type, Event A fires.
+- **Detection**: after each tick, compare active disruptions from `dispatcher.disruption_manager.get_active_events(now)`. If a `vehicle_breakdown` event newly became active this tick, check whether it removed the last compatible vehicle for any pending task; if so, trigger a query.
+- **Important caveat**: the current `_apply_event` implementation only sets a breakdown on an IDLE vehicle. If the vehicle is already EN_ROUTE or SERVICING when the breakdown fires, the event silently does nothing (`v.state == VehicleState.IDLE` check in `_apply_event`). No replanning is needed in that case — the vehicle finishes its current job then the expiry restores it to IDLE.
+
+**`gate_fault`** — Pushes `gate.available_at` into the future, preventing new aircraft from being assigned to that gate. Aircraft already AT the faulted gate are unaffected (they stay and continue service).
+- **Impact on pending tasks**: near-zero. Service tasks are created with a specific `gate_node` for an aircraft already at the gate; those tasks remain valid. The fault only blocks *new gate assignments* for LANDED aircraft awaiting a gate.
+- **Fires a query when**: an aircraft is currently TAXIING_IN toward the faulted gate (its path leads there) and the dispatcher has not yet rerouted it. A query would allow the agent to take any corrective action visible in obs — but the dispatcher currently has no rerouting logic for TAXIING_IN aircraft, so this is a no-op until that is added.
+- **Expiry** (gate becomes available again): new gate assignments become possible. No immediate query needed unless a LANDED aircraft is waiting for a gate with no other options — this is handled naturally when the gate opens and a new task can eventually be created.
+- **For now**: gate_fault events do NOT need a dedicated trigger. Log the event in `info` so the observation encodes it (future obs extension).
+
+**`runway_closure`** — Pushes `rwy.available_at` into the future if the runway is FREE, blocking departures.
+- **Impact on agent**: TAXIING_OUT aircraft queue at the runway entry node; they simply wait. There is no vehicle assignment decision to make. Runway routing is fully deterministic in the dispatcher.
+- **Fires a query**: **no**. The agent has no actions that affect runway usage. The closure resolves automatically when `rwy.available_at` is restored at expiry.
+- **Expiry**: runway becomes free again; TAXIING_OUT aircraft can depart next tick. No agent query needed.
+
+**`late_arrival`** — Applied at `trigger_time=0.0` (episode start, before the first `_advance_to_decision()` call). It simply shifts `ac.scheduled_arrival` forward.
+- **Fires a query**: **no**. Applied before the episode loop begins; there are no prior assignments to invalidate.
+
+**Summary table**:
+
+| Disruption type    | Query on apply? | Query on expiry? | Reason |
+|--------------------|-----------------|------------------|--------|
+| `late_arrival`     | No              | No               | Applied at t=0 before any assignments |
+| `vehicle_breakdown`| Yes (conditional) | No (Event A covers it) | Removes resource; Event A fires on expiry |
+| `gate_fault`       | No              | No               | No current assignment invalidated; no agent action available |
+| `runway_closure`   | No              | No               | Agent has no runway-related actions |
+
+The conditional vehicle_breakdown trigger is: query only if the breakdown eliminates the last compatible free vehicle for at least one pending task (i.e., `_has_decision_point()` was True before the breakdown and is now False). Otherwise the assignment pool is unchanged and no query is needed.
 
 ### What should NOT trigger a query
 - The agent just HOLDed and nothing changed — do not re-query.
@@ -180,6 +211,78 @@ def _advance_to_decision(self) -> float:
     return reward
 ```
 
+### Event C: vehicle_breakdown fires and eliminates the last compatible vehicle
+
+Add a third event detector in the tick loop, after the disruption manager's `apply_tick` has run:
+
+```python
+# Event C: vehicle_breakdown just fired and made a pending task un-assignable
+breakdown_fired = False
+if hasattr(self.dispatcher, 'disruption_manager') and self.dispatcher.disruption_manager:
+    for ev in self.dispatcher.disruption_manager._events:
+        if (ev.event_type == "vehicle_breakdown"
+                and ev._applied
+                and not ev._active   # just applied this tick
+                # "just applied" = applied flag flipped this tick; use a prev snapshot
+        ):
+            breakdown_fired = True
+            break
+```
+
+> **Note**: the exact "just applied this tick" detection requires tracking `prev_applied_set` (set of applied event IDs from the previous tick) alongside `prev_vehicle_states`. This is a small additional snapshot. Only trigger if `breakdown_fired AND NOT _has_decision_point()` (i.e., the breakdown removed the last compatible vehicle; if assignable work still exists, Event A or B will catch the relevant moment).
+
+### Safety valve for degenerate HOLD loops (GAP 2)
+
+With event-based triggering it is possible — due to bugs or edge-case scheduling — for the sim to advance an arbitrarily long time without any event firing. The current `MAX_TICKS_PER_STEP = 3600` safety cap exists in `_advance_to_decision()` but it only fires a return; there is no explicit warning.
+
+The updated approach must add a **secondary inactivity cap** with a warning:
+
+```python
+# Inside _advance_to_decision(), at the end of each tick iteration:
+INACTIVITY_WARN_TICKS = 600   # 10 sim-minutes with no event = likely a bug
+
+if ticks % INACTIVITY_WARN_TICKS == 0 and ticks > 0:
+    import warnings
+    warnings.warn(
+        f"[AirportEnv] No decision event in {ticks} ticks "
+        f"(sim_time={self._sim_time:.0f}s). "
+        f"Pending tasks: {len(self.dispatcher.pending_tasks)}, "
+        f"free vehicles: {sum(1 for v in self.dispatcher.vehicles.values() if v.is_available())}. "
+        f"Forcing query.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+    if self._has_decision_point():
+        break   # Force query with normal mask
+    # If no decision point exists either, continue running — this is normal
+    # (e.g., all vehicles busy, no tasks pending, waiting for next arrival)
+```
+
+Key design decisions:
+- **600-tick threshold, not MAX_TICKS_PER_STEP**: 10 minutes of sim time with pending work and available vehicles is abnormal; the current 1-hour cap is too loose to surface bugs quickly.
+- **Warning, not exception**: the episode continues uninterrupted; the warning surfaces in training logs for debugging.
+- **Only force-query if `_has_decision_point()` is True**: if no actionable work exists, the inactivity is expected (waiting for an aircraft to land, for a service to complete, etc.) and the sim continues silently.
+- **Normal operation**: this valve should never fire in a correct implementation. If it fires repeatedly during training, it signals a missed event type in the detector.
+
+### Event batching: query exactly once per tick (GAP 3)
+
+If multiple events fire within the same sim tick — e.g., two vehicles simultaneously complete service (both transition to IDLE) and a new task is also added — the env must query the agent **exactly once**, not once per event.
+
+This is guaranteed by the current implementation plan because:
+1. `_advance_to_decision()` calls `dispatcher.tick()` once per loop iteration.
+2. All event detection happens after `tick()` returns, reading the post-tick state.
+3. The `break` fires at most once per loop iteration regardless of how many events were detected.
+
+```python
+# The check is a single OR across all event flags:
+if (vehicle_freed or new_tasks_arrived or breakdown_fired) and self._has_decision_point():
+    break   # exits once, even if all three flags are True
+```
+
+The agent then receives a single observation that reflects the full post-tick state: all newly-freed vehicles, all new tasks, all active disruptions. It makes one decision and returns. There is no risk of querying twice in one tick.
+
+**Implication for the observation**: the obs `_build_obs()` already encodes all vehicle states and pending tasks in a single flat vector. No change needed — the existing obs naturally batches all simultaneous state changes.
+
 ### Action space implications
 
 No change to `Discrete(17)`. Action masking remains unchanged. The key difference is that when the agent HOLDs, `_advance_to_decision()` will **not** return on the next tick — it will keep running until something genuinely changes (a vehicle finishes, a new task arrives). This means:
@@ -204,3 +307,78 @@ With event-driven triggers:
 - Expected ratio: < 2:1 (maybe 1.1:1 if tasks always clear in one shot)
 
 This eliminates the 243:1 noise and forces the policy to learn from real scheduling decisions.
+
+---
+
+## 5. Scope of `pending_tasks`: Currently-Actionable Only (GAP 4)
+
+### What the code actually does
+
+`pending_tasks` is **currently-actionable only**. Tasks are never pre-populated for future arrivals. The two places that create tasks:
+
+**`dispatcher._create_service_tasks()` (dispatcher.py:260-285)**:
+```python
+def _create_service_tasks(self, now: float) -> None:
+    for ac in self.aircraft.values():
+        if ac.state != AircraftState.AT_GATE:
+            continue
+        ...
+        for svc in ac.service_requirements.required_services():
+            if svc == "pushback":
+                continue
+            if svc not in existing:
+                task = ServiceTask(...)
+                self.pending_tasks.append(task)
+```
+Guard: `ac.state != AircraftState.AT_GATE` — tasks are created only after the aircraft physically arrives at the gate. An aircraft still APPROACHING, LANDED, or TAXIING_IN has no pending tasks yet.
+
+**`dispatcher._handle_pushback()` (dispatcher.py:439-475)**:
+```python
+def _handle_pushback(self, now: float) -> None:
+    for ac in self.aircraft.values():
+        if ac.state != AircraftState.AT_GATE:
+            continue
+        if not ac.all_services_done():
+            continue
+        if now < ac.scheduled_departure:
+            continue
+        ...
+        task = ServiceTask(..., service_type="pushback", ...)
+        self.pending_tasks.append(task)
+```
+Guards: aircraft must be AT_GATE, all other services done, AND `now >= scheduled_departure`. Pushback tasks are created at the latest possible moment.
+
+**`sim/scheduler.py`**: `load_schedule()` only creates `Aircraft` objects; it never touches `pending_tasks`. No future task pre-population happens at schedule load time.
+
+### Consequence for the agent
+
+The agent is flying blind during the critical window between an aircraft's scheduled arrival and when it physically reaches its gate (APPROACHING → LANDED → TAXIING_IN → AT_GATE). This can take 60–300+ sim seconds depending on taxi distance. During this time:
+- The agent sees in obs that an aircraft exists (`is_active=1`) with a state less than AT_GATE
+- But no tasks appear in the pending-task slots
+- The agent cannot pre-position vehicles toward the gate in anticipation
+
+A human dispatcher would know "AA101 lands in 4 minutes at gate A2 — send the fuel truck now so it arrives concurrently." The current design forces the agent to react after the fact.
+
+### Proposed expansion: "anticipated task" slots with actionability flag
+
+**Do not implement yet — document only.**
+
+Add a flag `is_actionable: bool` to `ServiceTask` (default `True` for all currently-created tasks). Populate "anticipated tasks" in the observation by reading the schedule for aircraft that are APPROACHING or TAXIING_IN, projecting their service requirements, and materialising `ServiceTask` objects with `is_actionable=False`.
+
+```python
+# Sketch — not for implementation now
+class ServiceTask:
+    ...
+    is_actionable: bool = True   # False = task exists but no vehicle assignment yet allowed
+
+# In _create_anticipated_tasks(now):
+#   for ac in aircraft with state in {APPROACHING, TAXIING_IN}:
+#       project gate (from ac.assigned_gate or nearest free gate estimate)
+#       for svc in ac.service_requirements.required_services():
+#           if no existing task for this (flight_id, svc_type):
+#               push ServiceTask(..., is_actionable=False) into a separate anticipated_tasks list
+```
+
+The action mask would only expose `is_actionable=True` tasks for assignment, so the agent cannot prematurely assign a vehicle that can't service a not-yet-arrived aircraft. But the observation would encode anticipated tasks in the task slots (using `is_active=1, is_actionable=0` encoding), giving the agent the lookahead it needs to pre-position vehicles.
+
+**Why this matters**: with the event-driven trigger fix, the agent will be queried ~40 times per episode instead of ~9000. Each query is now a real scheduling decision. Lookahead lets the agent make the optimal pre-positioning choice at those 40 moments rather than always reacting. This is the difference between a reactive dispatcher and a proactive one.
