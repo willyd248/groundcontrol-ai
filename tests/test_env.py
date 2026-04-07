@@ -18,6 +18,7 @@ Tests:
   11. (event-trigger) each step advances sim time; batching confirmed.
   12. (event-trigger) safety valve emits RuntimeWarning after 600 idle ticks.
   13. (event-trigger) Event C fires when all compatible vehicles break mid-advance.
+  14. (conflict) first conflict terminates the episode with -200 terminal penalty.
 """
 
 from __future__ import annotations
@@ -157,6 +158,47 @@ class TestObsValues:
         env = AirportEnv(randomise=True, seed=7)
         rng = np.random.default_rng(7)
         _, info, _, _ = run_episode(env, rng, max_steps=2000)
+        env.close()
+
+
+class TestConflictTermination:
+    """First conflict ends the episode immediately with the terminal penalty."""
+
+    def test_conflict_terminates_episode(self, monkeypatch):
+        """
+        Injecting a conflict mid-advance must produce terminated=True, not truncated,
+        and the step reward must include REWARD_CONFLICT_TERMINAL (-200).
+        """
+        import warnings
+        from env.airport_env import REWARD_CONFLICT_TERMINAL
+
+        env = AirportEnv(schedule_path="schedule.json")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            env.reset()
+
+        # Wrap tick() to inject one conflict on the first tick of the next advance
+        injected = [False]
+        original_tick = env.dispatcher.tick
+
+        def conflict_tick(now, dt=1.0):
+            original_tick(now, dt)
+            if not injected[0]:
+                env.dispatcher.conflict_count += 1
+                injected[0] = True
+
+        monkeypatch.setattr(env.dispatcher, "tick", conflict_tick)
+
+        obs, reward, terminated, truncated, info = env.step(ACTION_HOLD)
+
+        assert injected[0], "Conflict was never injected"
+        assert terminated, "Episode must be terminated (not truncated) after a conflict"
+        assert not truncated, "truncated must be False when terminated by conflict"
+        assert reward <= REWARD_CONFLICT_TERMINAL, (
+            f"Reward {reward:.1f} must include terminal penalty {REWARD_CONFLICT_TERMINAL}"
+        )
+        assert info["conflict_count"] >= 1
+
         env.close()
 
 

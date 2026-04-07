@@ -143,7 +143,8 @@ REWARD_PER_DELAY_MINUTE   = -1.0    # per flight-minute of new delay this tick
 REWARD_ONTIME_DEPARTURE   = +10.0   # departed ≤ 5 min late
 REWARD_LATE_DEPARTURE     = +2.0    # departed > 5 min late
 REWARD_HOLD_WITH_WORK     = -0.1    # held when valid assignment existed
-REWARD_CONFLICT           = -50.0   # per new conflict detected
+REWARD_CONFLICT           = -50.0   # per additional conflict in the same tick (rarely > 1)
+REWARD_CONFLICT_TERMINAL  = -200.0  # lump-sum on the tick that produces the first conflict
 REWARD_PENDING_AT_TIMEOUT = -20.0   # per flight still pending at truncation
 REWARD_ABANDONMENT        = -1.0    # per minute of service time wasted on an abandoned task
 
@@ -210,6 +211,7 @@ class AirportEnv(gym.Env):
         self._prev_delay_total:   float = 0.0
         self._prev_conflict_count: int  = 0
         self._departed_ids:    set[str] = set()
+        self._conflict_terminated: bool = False
 
     # ── Public Gymnasium API ──────────────────────────────────────────────────
 
@@ -246,13 +248,14 @@ class AirportEnv(gym.Env):
                 if gate is not None:
                     gate.occupied_by = ac.flight_id
 
-        self._sim_time             = 0.0
-        self._aircraft_order       = [a.flight_id for a in aircraft_list]
-        self._vehicle_order        = [v.vehicle_id for v in fleet]
-        self._prev_delay_total     = 0.0
-        self._prev_conflict_count  = 0
-        self._departed_ids         = set()
-        self._abandoned_task_ids   = set()
+        self._sim_time              = 0.0
+        self._aircraft_order        = [a.flight_id for a in aircraft_list]
+        self._vehicle_order         = [v.vehicle_id for v in fleet]
+        self._prev_delay_total      = 0.0
+        self._prev_conflict_count   = 0
+        self._departed_ids          = set()
+        self._abandoned_task_ids    = set()
+        self._conflict_terminated   = False
         self._abandoned_task_ids:  set[str] = set()
 
         # Run to the first decision point
@@ -284,8 +287,8 @@ class AirportEnv(gym.Env):
         )
         timed_out = self._sim_time >= SIM_HORIZON
 
-        terminated = all_done
-        truncated  = (not all_done) and timed_out
+        terminated = all_done or self._conflict_terminated
+        truncated  = (not terminated) and timed_out
 
         if truncated:
             n_pending = sum(
@@ -395,11 +398,15 @@ class AirportEnv(gym.Env):
             delay_r, dep_r = self._compute_tick_reward()
             reward += delay_r + dep_r
 
-            # Conflict penalty
+            # Conflict penalty — first conflict terminates the episode (Option B).
+            # Any additional simultaneous conflicts in the same tick get -50 each.
             new_conflicts = self.dispatcher.conflict_count - self._prev_conflict_count
             if new_conflicts > 0:
-                reward += REWARD_CONFLICT * new_conflicts
-                self._prev_conflict_count = self.dispatcher.conflict_count
+                reward += REWARD_CONFLICT_TERMINAL          # -200 flat on first hit
+                reward += REWARD_CONFLICT * (new_conflicts - 1)   # -50 per extra
+                self._prev_conflict_count  = self.dispatcher.conflict_count
+                self._conflict_terminated  = True
+                break   # end advance loop; step() will terminate the episode
 
             # All done?
             if all(a.state == AircraftState.DEPARTED

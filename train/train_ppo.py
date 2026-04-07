@@ -18,9 +18,10 @@ Configuration (hard-coded per spec):
     total_timesteps = 1_000_000
 
 Outputs:
-    checkpoints/airport_ppo_{N}_steps.zip    every 50k steps
-    checkpoints/airport_ppo_final.zip        at end of training
-    runs/AirportPPO_*/                       TensorBoard logs
+    checkpoints/airport_ppo_{N}_steps.zip          every 50k steps (recovery)
+    models/session5_fixed_step_{N}.zip             every 250k steps (official)
+    models/session5_fixed.zip                      final model
+    runs/AirportPPO_*/                             TensorBoard logs
 """
 
 from __future__ import annotations
@@ -47,11 +48,13 @@ GAMMA              = 0.99
 CLIP_RANGE         = 0.2
 ENT_COEF           = 0.01
 TOTAL_TIMESTEPS    = 1_000_000
-CHECKPOINT_FREQ    = 50_000     # save checkpoint every N timesteps (total, all envs)
+CHECKPOINT_FREQ    = 50_000     # recovery checkpoints — every N timesteps (total)
+MODELS_FREQ        = 250_000    # official model snapshots — every N timesteps (total)
 EVAL_FREQ          = 50_000     # evaluate vs FCFS every N timesteps
 EVAL_SEED          = 42
 
-CHECKPOINT_DIR     = "checkpoints"
+CHECKPOINT_DIR     = "checkpoints"   # frequent recovery saves
+MODELS_DIR         = "models"        # official release checkpoints
 TENSORBOARD_LOG    = "runs"
 
 
@@ -85,6 +88,7 @@ def main() -> None:
     args = parser.parse_args()
 
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    os.makedirs(MODELS_DIR, exist_ok=True)
     os.makedirs(TENSORBOARD_LOG, exist_ok=True)
 
     # ── Build vectorised env ─────────────────────────────────────────────────
@@ -114,10 +118,18 @@ def main() -> None:
         )
 
     # ── Callbacks ────────────────────────────────────────────────────────────
+    # Recovery checkpoints — frequent, for resuming interrupted runs
     checkpoint_cb = CheckpointCallback(
-        save_freq=max(1, CHECKPOINT_FREQ // args.n_envs),  # per-env freq
+        save_freq=max(1, CHECKPOINT_FREQ // args.n_envs),
         save_path=CHECKPOINT_DIR,
         name_prefix="airport_ppo",
+        verbose=1,
+    )
+    # Official model snapshots — every 250k steps for policy health comparison
+    models_cb = CheckpointCallback(
+        save_freq=max(1, MODELS_FREQ // args.n_envs),
+        save_path=MODELS_DIR,
+        name_prefix="session5_fixed_step",
         verbose=1,
     )
     eval_cb = AirportEvalCallback(
@@ -125,7 +137,7 @@ def main() -> None:
         eval_seed=EVAL_SEED,
         verbose=1,
     )
-    callbacks = CallbackList([checkpoint_cb, eval_cb])
+    callbacks = CallbackList([checkpoint_cb, models_cb, eval_cb])
 
     # ── Train ────────────────────────────────────────────────────────────────
     print(
@@ -140,7 +152,7 @@ def main() -> None:
         reset_num_timesteps=(args.resume is None),
     )
 
-    final_path = os.path.join(CHECKPOINT_DIR, "airport_ppo_final")
+    final_path = os.path.join(MODELS_DIR, "session5_fixed")
     model.save(final_path)
     print(f"\nTraining complete. Final model saved to {final_path}.zip")
 

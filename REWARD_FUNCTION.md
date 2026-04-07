@@ -14,7 +14,8 @@ reward magnitude without updating this file and getting explicit approval.
 | `REWARD_ONTIME_DEPARTURE` | +10.0 | Bonus when a flight departs ≤ 5 min late |
 | `REWARD_LATE_DEPARTURE` | +2.0 | Consolation bonus when a flight departs > 5 min late |
 | `REWARD_HOLD_WITH_WORK` | −0.1 | Agent held when a legal assignment existed |
-| `REWARD_CONFLICT` | −50.0 | Per new taxiway/runway conflict detected |
+| `REWARD_CONFLICT_TERMINAL` | −200.0 | Lump-sum terminal penalty on the tick that produces the first conflict |
+| `REWARD_CONFLICT` | −50.0 | Per additional simultaneous conflict in the same tick (rarely > 0) |
 | `REWARD_PENDING_AT_TIMEOUT` | −20.0 | Per flight still active when sim_time ≥ SIM_HORIZON |
 | `REWARD_ABANDONMENT` | −1.0 | Per minute of service time wasted on an abandoned task |
 
@@ -101,25 +102,44 @@ signal rather than noise.
 
 ---
 
-## Signal 4 — Conflict penalty (fires per tick, per new conflict)
+## Signal 4 — Conflict penalty + episode termination (Option B, fires on first conflict)
 
 **Location:** `_advance_to_decision()` tick loop
 
 ```python
 new_conflicts = self.dispatcher.conflict_count - self._prev_conflict_count
 if new_conflicts > 0:
-    reward += REWARD_CONFLICT * new_conflicts   # −50.0 each
-    self._prev_conflict_count = self.dispatcher.conflict_count
+    reward += REWARD_CONFLICT_TERMINAL          # −200 flat on first hit
+    reward += REWARD_CONFLICT * (new_conflicts - 1)   # −50 per extra conflict same tick
+    self._prev_conflict_count  = self.dispatcher.conflict_count
+    self._conflict_terminated  = True
+    break   # end advance loop; step() terminates the episode
 ```
 
-**What it does:** Penalises each new taxiway segment conflict detected by the
-world graph (two aircraft/vehicles attempt to occupy the same segment). Counted
-via `dispatcher.conflict_count` which increments in `_advance_aircraft()` and
-`_advance_vehicles()` when `ConflictError` is raised.
+In `step()`:
+```python
+terminated = all_done or self._conflict_terminated
+```
 
-**Intent:** Hard deterrent. −50.0 per conflict is large relative to the delay
-signal, making conflict avoidance a near-absolute constraint. In practice,
-conflicts are rare under normal operation (separation logic prevents most).
+**What it does:** The first conflict detected in any tick applies a −200 terminal
+penalty and immediately ends the episode (`terminated=True`). Any additional
+simultaneous conflicts in the same tick (very rare — would require two aircraft
+colliding on the same segment in one tick) get −50 each. The episode does not
+continue: training moves on to the next episode.
+
+**Why Option B over plain −500:**
+- Termination produces a stronger gradient signal because the policy gets a clear
+  episodic consequence, not just a large negative step reward that can be
+  partially offset by future steps.
+- Failed (conflict) episodes waste no compute — they end in 1 step after the
+  conflict tick.
+- −200 is chosen to exceed the maximum possible on-time departure reward for the
+  remaining flights (10 flights × +10 = +100), so there is no scenario where
+  causing a conflict is positive-sum.
+
+**In practice:** Conflicts are rare under normal separation logic. This signal
+fires only if the graph's separation rules break down — which should never happen
+with a correctly trained policy.
 
 ---
 
@@ -188,7 +208,7 @@ service completion.
 | Delay accumulation | −0 to −200 | Depends heavily on dispatch speed |
 | Departure bonuses | +10 to +100 | +10 per on-time flight |
 | Hold penalty | −0.1 to −5.0 | With Step 2 fix: ~40 steps × −0.1 = −4 max |
-| Conflict penalty | 0 (rarely fires) | Separation logic prevents most |
+| Conflict penalty | 0 (rarely fires) | −200 terminal + episode ends immediately |
 | Pending at timeout | 0 or −20 to −240 | 0 if all flights depart before 4 hours |
 | Abandonment | 0 (normal ops) | Fires only on disruption force-release |
 
@@ -197,11 +217,41 @@ service completion.
 
 ---
 
+---
+
+## Arrival-only coverage
+
+**All schedules currently have zero arrival-only flights.**
+
+| Source | Total flights | Arrival-only | Departure-only | Turnarounds |
+|--------|---------------|--------------|----------------|-------------|
+| `schedule.json` (fixed eval) | 12 | 0 (0%) | 0 (0%) | 12 (100%) |
+| `demo/scenarios/easy.json` | 4 | 0 (0%) | 0 (0%) | 4 (100%) |
+| `demo/scenarios/medium.json` | 8 | 0 (0%) | 0 (0%) | 8 (100%) |
+| `demo/scenarios/stress.json` | 12 | 0 (0%) | 0 (0%) | 12 (100%) |
+| `env/random_schedule.py` | 6–14 random | 0 (0%) | ~20% by design | ~80% |
+
+**Implication:** The policy has never seen arrival-only aircraft (flights that
+land but never depart — no pushback, no baggage_load). The reward function
+includes `REWARD_ONTIME_DEPARTURE` which checks `scheduled_departure < inf`.
+Arrival-only flights would have `scheduled_departure = inf` and would never
+trigger departure bonuses or delay penalties — they would be invisibly idle
+at gate until the episode ends.
+
+If arrival-only flights are added in future sessions, two changes are needed:
+1. The reward function needs an "all services completed" bonus for arrival-only
+   flights (currently only departures generate a positive signal).
+2. `env/random_schedule.py` needs a non-zero `arrival_only_prob` parameter.
+
+---
+
 ## What requires Will's approval before changing
 
 1. Any change to `REWARD_ONTIME_DEPARTURE` / `REWARD_LATE_DEPARTURE` ratio
    (changes the relative value of on-time vs late departures).
-2. Any change to `REWARD_CONFLICT` (touching the conflict deterrent).
+2. Any change to `REWARD_CONFLICT_TERMINAL` or `REWARD_CONFLICT`
+   (touching the conflict deterrent — must stay > max remaining positive reward).
 3. Any change to `REWARD_PENDING_AT_TIMEOUT` (affects the timeout exploitation
    boundary — must remain > max possible delay per flight).
 4. Introducing a new reward signal (update this document first).
+5. Adding arrival-only flights to any schedule (needs reward function changes).
