@@ -382,3 +382,50 @@ class ServiceTask:
 The action mask would only expose `is_actionable=True` tasks for assignment, so the agent cannot prematurely assign a vehicle that can't service a not-yet-arrived aircraft. But the observation would encode anticipated tasks in the task slots (using `is_active=1, is_actionable=0` encoding), giving the agent the lookahead it needs to pre-position vehicles.
 
 **Why this matters**: with the event-driven trigger fix, the agent will be queried ~40 times per episode instead of ~9000. Each query is now a real scheduling decision. Lookahead lets the agent make the optimal pre-positioning choice at those 40 moments rather than always reacting. This is the difference between a reactive dispatcher and a proactive one.
+
+---
+
+## 6. HOLD Masking Rule (added after 1M regression diagnosis)
+
+### Background
+
+Training to 1M steps revealed that the policy diverged by learning an aggressive HOLD heuristic: it held 36–41% of the time on high-choice-tick schedules, but every HOLD triggered `REWARD_HOLD_WITH_WORK` (−0.1 each) with no downstream benefit. The root cause was that HOLD was always legal — even when valid assignments existed — giving the policy a degree of freedom it could not learn to use correctly with only ~9 choice ticks per episode.
+
+### The fix
+
+`action_masks()` now enforces mutual exclusion:
+
+```python
+# HOLD only legal when no assignment action is legal
+mask[ACTION_HOLD] = not any_assignment
+```
+
+**HOLD is legal if and only if zero assignment actions are currently legal.**
+
+### Why this tightens the contract with the event-based trigger
+
+The event-based trigger (Section 4) fires only when something actionable changed:
+- **Event A**: a vehicle became free → at least one assignment is now possible
+- **Event B**: a new task arrived → at least one assignment is now possible
+- **Event C**: all options just disappeared → HOLD is the only legal action
+
+Events A and B always produce a state where at least one assignment is legal. Under the old masking, the agent could choose HOLD anyway — an action that is strictly dominated (immediate assignment is available and HOLD costs −0.1 penalty). The new masking removes this dominated option: when the trigger fires for Events A/B, the agent cannot hold.
+
+Event C produces a state where no assignments are legal. Under the new masking, HOLD is the only legal action, which is correct: the agent has nothing to do until the next event fires.
+
+**The safety valve** (600-tick fallback) may also fire in edge cases where the trigger logic missed an event. In that case `_has_decision_point()` is True, so at least one assignment action will be legal, and HOLD will be masked — the agent is forced to assign.
+
+### Contract summary
+
+| Trigger event | Assignments available | HOLD legal | Forced behavior |
+|---|---|---|---|
+| Event A (vehicle freed) | Yes (≥1) | **No** | Must assign |
+| Event B (new task) | Yes (≥1) | **No** | Must assign |
+| Event C (options gone) | No | **Yes (only)** | Must hold |
+| Safety valve (600 ticks) | Yes (≥1) | **No** | Must assign |
+
+### Tests added (`tests/test_env.py`)
+
+- `TestHoldMasking::test_hold_masked_when_assignments_available` — verifies HOLD=False when any assignment is legal
+- `TestHoldMasking::test_hold_legal_only_when_no_assignments` — verifies mutual exclusion across a full episode
+- `TestHoldMasking::test_existing_episodes_still_run` — full episode on seeds 0, 5, 42 with invariant check every step

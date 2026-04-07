@@ -53,7 +53,7 @@ Action space  Discrete(MAX_TASKS + 1 = 17)
 Action masking (MaskablePPO compatible via action_masks())
 ──────────────────────────────────────────────────────────
   mask[i] = True  iff  i < len(pending_tasks)  AND  free compatible vehicle exists
-  mask[ACTION_HOLD] = True always
+  mask[ACTION_HOLD] = True ONLY when no assignment action is legal (see HOLD masking rule)
 
 Reward
 ──────
@@ -303,12 +303,25 @@ class AirportEnv(gym.Env):
         """
         Boolean mask of shape (MAX_TASKS+1,) for use with sb3-contrib MaskablePPO.
         True = the action is legal this step.
+
+        HOLD masking rule: HOLD (action 16) is legal ONLY when zero assignment
+        actions (0-15) are legal.  When any valid assignment exists, the agent
+        must choose an assignment — it cannot defer.  This tightens the contract
+        with the event-based trigger: the trigger only fires when something
+        actionable happened, so holding in that moment is always sub-optimal.
+
+        The only legitimate HOLD scenario is Event C (resources reduced): the
+        trigger fired because the last valid option just disappeared, so all
+        assignment bits are False and HOLD is the sole legal action.
         """
         mask = np.zeros(MAX_TASKS + 1, dtype=bool)
-        mask[ACTION_HOLD] = True   # hold always legal
+        any_assignment = False
         for i in range(min(len(self.dispatcher.pending_tasks), MAX_TASKS)):
             if self._is_valid_assignment(i):
                 mask[i] = True
+                any_assignment = True
+        # HOLD only when no assignment is possible
+        mask[ACTION_HOLD] = not any_assignment
         return mask
 
     # ── Internal helpers ──────────────────────────────────────────────────────

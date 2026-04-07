@@ -19,6 +19,9 @@ Tests:
   12. (event-trigger) safety valve emits RuntimeWarning after 600 idle ticks.
   13. (event-trigger) Event C fires when all compatible vehicles break mid-advance.
   14. (conflict) first conflict terminates the episode with -200 terminal penalty.
+  15. (hold-mask) HOLD is illegal whenever any assignment action is legal.
+  16. (hold-mask) HOLD is legal only when no assignment action is legal (mutual exclusion).
+  17. (hold-mask) full episodes run cleanly with greedy-assign policy under new masking.
 """
 
 from __future__ import annotations
@@ -68,9 +71,12 @@ def run_episode(env: AirportEnv, rng: np.random.Generator, max_steps: int = 1000
     for _ in range(max_steps):
         mask = env.action_masks()
 
-        # Shape and hold-always-valid invariant
+        # Shape and mask-validity invariant
         assert mask.shape == (env.action_space.n,), f"mask shape: {mask.shape}"
-        assert mask[ACTION_HOLD], "Hold must always be masked True"
+        # HOLD is legal only when no assignment is legal (mutual exclusion)
+        assert mask.any(), "At least one action must be legal"
+        if mask[:ACTION_HOLD].any():
+            assert not mask[ACTION_HOLD], "HOLD must be masked when assignments are available"
 
         action = random_valid_action(env, rng)
         assert 0 <= action < env.action_space.n, f"action out of range: {action}"
@@ -131,13 +137,23 @@ class TestObsAndMaskShapes:
         assert len(mask) == env.action_space.n
         env.close()
 
-    def test_hold_always_valid(self):
+    def test_hold_mask_mutual_exclusion(self):
+        """HOLD is legal iff no assignment action is legal (mutual exclusion)."""
         env = AirportEnv(schedule_path="schedule.json")
         rng = np.random.default_rng(0)
         env.reset()
         for _ in range(50):
             mask = env.action_masks()
-            assert mask[ACTION_HOLD], "Hold must always be valid"
+            has_assignment = mask[:ACTION_HOLD].any()
+            if has_assignment:
+                assert not mask[ACTION_HOLD], (
+                    "HOLD must be masked when assignments are available"
+                )
+            else:
+                assert mask[ACTION_HOLD], (
+                    "HOLD must be the fallback when no assignments are available"
+                )
+            assert mask.any(), "At least one action must always be legal"
             action = random_valid_action(env, rng)
             _, _, terminated, truncated, _ = env.step(action)
             if terminated or truncated:
@@ -581,3 +597,119 @@ class TestEventTrigger:
         )
 
         env.close()
+
+
+# ── HOLD masking tests ────────────────────────────────────────────────────────
+
+class TestHoldMasking:
+    """
+    HOLD (action 16) must be illegal whenever any assignment action (0-15)
+    is legal. HOLD is only legal when zero assignment options exist.
+
+    This enforces the contract: the event-based trigger only fires when
+    something actionable happened, so holding at that moment is never
+    a valid response to a genuine scheduling opportunity.
+    """
+
+    def test_hold_masked_when_assignments_available(self):
+        """
+        In any state where at least one assignment action is legal,
+        HOLD must NOT appear in the mask.
+        """
+        env = AirportEnv(randomise=True, seed=42)
+        env.reset(seed=42)
+
+        # Run until we find a step where an assignment is possible
+        found_state_with_assignment = False
+        for _ in range(500):
+            mask = env.action_masks()
+            any_assignment = mask[:ACTION_HOLD].any()
+            if any_assignment:
+                # The key assertion: HOLD must be False here
+                assert not mask[ACTION_HOLD], (
+                    "HOLD should be masked out when at least one assignment action "
+                    f"is legal. Mask: {mask}"
+                )
+                found_state_with_assignment = True
+                break
+            # Step with HOLD (the only legal action) to advance
+            obs, _, terminated, truncated, _ = env.step(ACTION_HOLD)
+            if terminated or truncated:
+                break
+
+        env.close()
+        assert found_state_with_assignment, (
+            "Never found a state with a legal assignment — "
+            "test didn't exercise the core assertion."
+        )
+
+    def test_hold_legal_only_when_no_assignments(self):
+        """
+        Whenever HOLD is legal, no assignment action should be legal.
+        This is the converse of test_hold_masked_when_assignments_available.
+        """
+        env = AirportEnv(randomise=True, seed=7)
+        env.reset(seed=7)
+
+        done = False
+        steps = 0
+        while not done and steps < 1000:
+            mask = env.action_masks()
+            # Invariant: HOLD and any assignment action are mutually exclusive
+            if mask[ACTION_HOLD]:
+                assert not mask[:ACTION_HOLD].any(), (
+                    "HOLD is legal but so are assignment actions — mutual exclusion violated. "
+                    f"Assignment mask: {mask[:ACTION_HOLD]}"
+                )
+            # If assignments exist, pick the first legal one; otherwise HOLD
+            legal = np.where(mask)[0]
+            action = int(legal[0]) if len(legal) > 0 else ACTION_HOLD
+            obs, _, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+            steps += 1
+
+        env.close()
+
+    def test_existing_episodes_still_run(self):
+        """
+        Full episode with greedy-assign policy (always pick first legal action)
+        completes without crash, mask is always valid, and HOLD/assignment
+        mutual exclusion holds throughout.
+        """
+        import warnings as _w
+        for seed in [0, 5, 42]:
+            env = AirportEnv(randomise=True, seed=seed)
+            env.reset(seed=seed)
+            done = False
+            steps = 0
+            while not done and steps < 2000:
+                with _w.catch_warnings():
+                    _w.simplefilter("ignore", RuntimeWarning)
+                    mask = env.action_masks()
+
+                # Shape and dtype
+                assert mask.shape == (ACTION_HOLD + 1,), f"mask shape wrong: {mask.shape}"
+                assert mask.dtype == bool
+
+                # Mutual exclusion: HOLD and assignments never both True
+                if mask[ACTION_HOLD]:
+                    assert not mask[:ACTION_HOLD].any(), (
+                        f"seed={seed} step={steps}: HOLD and assignment both legal"
+                    )
+                if mask[:ACTION_HOLD].any():
+                    assert not mask[ACTION_HOLD], (
+                        f"seed={seed} step={steps}: assignment legal but HOLD also legal"
+                    )
+
+                # At least one action is always legal
+                assert mask.any(), f"seed={seed} step={steps}: all actions masked — impossible"
+
+                # Greedy: pick first legal assignment, else HOLD
+                legal = np.where(mask)[0]
+                non_hold = [a for a in legal if a != ACTION_HOLD]
+                action = non_hold[0] if non_hold else ACTION_HOLD
+                obs, _, terminated, truncated, _ = env.step(action)
+                done = terminated or truncated
+                steps += 1
+
+            env.close()
