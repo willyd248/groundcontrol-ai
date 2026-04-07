@@ -1,5 +1,10 @@
 # models/ — Saved Policy Checkpoints
 
+## session5_masked_smoke_250k.zip
+250k smoke retrain with HOLD masking (HOLD illegal when assignments exist). HOLD rate = 0% on all 5 eval seeds (42, 100, 106, 110, 116). Matches FCFS exactly — no divergence observed. Reward stable 64.8–65.3 from step 0, starting from prior weights (warm start). Zero conflicts. Use as gate-pass baseline before full 2M retrain.
+
+**Health check results:** reward rising ✅ | HOLD rate 0% on all seeds ✅ | matches FCFS seed=42 ✅ | beats FCFS on 0/4 hard seeds ✗ (expected at 250k — no divergence is the pass criterion).
+
 ## session5_reactive_300k.zip
 Pre-divergence reactive baseline. HOLD rate ~0% on eval. Matches FCFS, occasional 1-2 min wins on high-choice schedules (seed=116: −2.1 min at 300k). Use as comparison floor for future training runs. See `CHECKPOINT_1M_BATTERY.md` Section 2 for the 300k delta table.
 
