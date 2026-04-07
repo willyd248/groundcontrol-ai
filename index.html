@@ -19,12 +19,43 @@
 <style>
 :root{--bg:#020403;--bg2:#040604;--bg3:#070a07;--border:rgba(0,255,65,0.1);--t1:#a8ffa8;--t2:#4a7a4a;--t3:#2a4a2a;--blue:#00ccff;--green:#00ff41;--amber:#FFB000;--red:#FF4444;--purple:#cc99ff;--cyan:#00ffdd;--mono:'JetBrains Mono',monospace;--sans:'JetBrains Mono',monospace}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidden;height:100vh;width:100vw}
+body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow-x:hidden;width:100vw;scroll-behavior:smooth}
 
-#map-wrap{position:absolute;top:0;left:0;right:320px;bottom:48px;background:var(--bg)}
+/* ── Landing hero ── */
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:0 48px;position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+#hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 60% 50%,rgba(0,255,65,0.04) 0%,transparent 70%);pointer-events:none}
+.hero-eyebrow{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--t3);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.hero-eyebrow::before{content:'';display:inline-block;width:24px;height:1px;background:var(--green);opacity:.4}
+h1.hero-headline{font-size:clamp(28px,4vw,52px);font-weight:700;color:var(--t1);line-height:1.1;letter-spacing:-.5px;margin-bottom:20px;max-width:640px}
+h1.hero-headline em{color:var(--green);font-style:normal;text-shadow:0 0 30px rgba(0,255,65,.3)}
+.hero-sub{font-size:13px;color:var(--t2);line-height:1.7;max-width:520px;margin-bottom:40px}
+.hero-cta{display:inline-flex;align-items:center;gap:10px;background:rgba(0,255,65,.08);border:1px solid rgba(0,255,65,.3);color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:13px 28px;text-decoration:none;border-radius:2px;cursor:pointer;transition:background .15s,box-shadow .15s}
+.hero-cta:hover{background:rgba(0,255,65,.14);box-shadow:0 0 20px rgba(0,255,65,.12)}
+.hero-stats{display:flex;gap:48px;margin-top:64px;padding-top:40px;border-top:1px solid var(--border)}
+.hs-item{display:flex;flex-direction:column;gap:6px}
+.hs-value{font-size:28px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.hs-unit{font-size:9px;font-weight:700;color:var(--green);letter-spacing:1.5px;text-transform:uppercase}
+.hs-label{font-size:9px;color:var(--t3);letter-spacing:.8px;text-transform:uppercase}
+.hero-grid-bg{position:absolute;inset:0;pointer-events:none;opacity:.4}
+
+/* ── Simulation section ── */
+#simulation{position:relative;height:100vh;overflow:hidden}
+.sim-header{position:absolute;top:0;left:0;right:0;height:32px;background:rgba(2,4,3,.98);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;z-index:10;backdrop-filter:blur(8px);flex-shrink:0}
+.sim-header-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2)}
+.sim-header-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pd 2s infinite;box-shadow:0 0 6px var(--green)}
+.sim-header-divider{width:1px;height:14px;background:var(--border)}
+
+#map-wrap{position:absolute;top:32px;left:0;right:320px;bottom:48px;background:var(--bg)}
 #map-wrap canvas{display:block;width:100%;height:100%}
-#right-panel{position:absolute;top:0;right:0;width:320px;bottom:48px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;z-index:5}
+#right-panel{position:absolute;top:32px;right:0;width:320px;bottom:48px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;z-index:5}
 #kpi{position:absolute;bottom:0;left:0;right:0;height:48px;background:rgba(2,4,3,.98);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 20px;font-family:var(--mono);z-index:5;backdrop-filter:blur(8px)}
+
+/* ── Footer ── */
+#site-footer{padding:32px 48px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.footer-brand{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--t3)}
+.footer-links{display:flex;gap:24px}
+.footer-links a{font-size:10px;color:var(--t3);text-decoration:none;letter-spacing:.5px;transition:color .15s}
+.footer-links a:hover{color:var(--t1)}
 
 .ps{flex:1;min-height:0;display:flex;flex-direction:column}
 #dsp{flex:3}
@@ -130,9 +161,11 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 
 /* ── Mobile ── */
 @media(max-width:768px){
-  body{overflow-y:auto;height:auto}
-  #map-wrap{position:relative;left:0;right:0;bottom:0;height:55vw;min-height:260px}
-  #right-panel{position:relative;width:100%;height:280px;border-left:none;border-top:1px solid var(--border)}
+  #hero{padding:0 24px;min-height:100svh}
+  .hero-stats{gap:28px;flex-wrap:wrap}
+  #simulation{height:auto}
+  #map-wrap{position:relative;top:0;left:0;right:0;bottom:0;height:55vw;min-height:260px}
+  #right-panel{position:relative;top:0;width:100%;height:280px;border-left:none;border-top:1px solid var(--border)}
   #kpi{position:sticky;bottom:0;height:auto;min-height:40px;flex-wrap:wrap;padding:6px 12px;gap:6px 0;row-gap:4px}
   .kd{display:none}
   .ki{gap:4px;padding:2px 8px}
@@ -140,6 +173,7 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
   .kc{display:none}
   #vc{width:calc(100vw - 32px);left:16px;bottom:16px}
   .ob-grid{grid-template-columns:1fr}
+  #site-footer{padding:24px}
 }
 
 @keyframes pd{0%,100%{opacity:1}50%{opacity:.4}}
@@ -149,6 +183,36 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 </style>
 </head>
 <body>
+
+<!-- ── Hero landing section ── -->
+<header id="hero">
+  <svg class="hero-grid-bg" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(0,255,65,0.06)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(#grid)"/></svg>
+  <div class="hero-eyebrow">Ground Operations · AI Dispatch · JFK Terminal 4</div>
+  <h1 class="hero-headline">Airport ground ops,<br><em>dispatched by AI.</em></h1>
+  <p class="hero-sub">Manual ramp dispatch costs airlines $150/min in gate delays. GroundControl autonomously coordinates 18 ground vehicles — fuel trucks, baggage tugs, pushback tractors — across 8 active gates using real-time constraint solving and runway safety monitoring.</p>
+  <a class="hero-cta" href="#simulation">Watch AI dispatch live →</a>
+  <div class="hero-stats">
+    <div class="hs-item"><span class="hs-value">18</span><span class="hs-unit">vehicles</span><span class="hs-label">Coordinated</span></div>
+    <div class="hs-item"><span class="hs-value">8</span><span class="hs-unit">gates</span><span class="hs-label">Active</span></div>
+    <div class="hs-item"><span class="hs-value">~22%</span><span class="hs-unit">reduction</span><span class="hs-label">Avg turnaround</span></div>
+    <div class="hs-item"><span class="hs-value">2</span><span class="hs-unit">runways</span><span class="hs-label">Safety monitored</span></div>
+  </div>
+</header>
+
+<main>
+<!-- ── Simulation section ── -->
+<section id="simulation">
+  <div class="sim-header">
+    <span class="sim-header-dot"></span>
+    <span class="sim-header-label">Live simulation</span>
+    <div class="sim-header-divider"></div>
+    <span class="sim-header-label">JFK Terminal 4</span>
+    <div class="sim-header-divider"></div>
+    <span class="sim-header-label">AI dispatch active</span>
+    <div class="sim-header-divider"></div>
+    <span class="sim-header-label">18 vehicles</span>
+  </div>
+
 <!-- Onboarding overlay -->
 <div id="onboarding">
   <div class="ob-card">
@@ -1106,5 +1170,18 @@ function init(){
 
 init();
 </script>
+
+</section><!-- /#simulation -->
+</main>
+
+<footer id="site-footer">
+  <span class="footer-brand">GROUNDCONTROL AI — Built by Will DiMaio</span>
+  <nav class="footer-links">
+    <a href="/terms.html">Terms of Service</a>
+    <a href="/privacy.html">Privacy Policy</a>
+    <a href="https://github.com/willyd248/groundcontrol-ai" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+</footer>
+
 </body>
 </html>
