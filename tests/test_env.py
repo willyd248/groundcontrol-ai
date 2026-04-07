@@ -242,6 +242,119 @@ class TestMaskValidity:
         env.close()
 
 
+# ── Abandonment tests (Step 3) ────────────────────────────────────────────────
+
+class TestAbandonmentProtection:
+    """
+    Verify the committed flag prevents mid-service reassignment.
+    """
+
+    def test_no_mid_service_reassignment(self):
+        """
+        Once a vehicle is dispatched (committed=True), it must not be selected
+        for a new assignment until its current task completes (committed=False).
+        """
+        import warnings
+        from sim.entities import VehicleState
+
+        env = AirportEnv(schedule_path="schedule.json")
+        rng = np.random.default_rng(0)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            env.reset()
+
+            for _ in range(300):
+                committed_ids = {
+                    vid for vid, v in env.dispatcher.vehicles.items()
+                    if v.committed
+                }
+
+                mask = env.action_masks()
+
+                # No committed vehicle should appear as the assignment target
+                for i in range(len(env.dispatcher.pending_tasks)):
+                    if i >= MAX_TASKS or not mask[i]:
+                        continue
+                    task = env.dispatcher.pending_tasks[i]
+                    vehicle = env.dispatcher._find_nearest_vehicle(
+                        task.service_type, task.gate_node
+                    )
+                    assert vehicle is not None, (
+                        f"Mask says action {i} is valid but no vehicle found"
+                    )
+                    assert vehicle.vehicle_id not in committed_ids, (
+                        f"Vehicle {vehicle.vehicle_id} is committed (mid-task) "
+                        f"but appeared as assignment candidate for action {i}"
+                    )
+
+                action = random_valid_action(env, rng)
+                _, _, terminated, truncated, _ = env.step(action)
+                if terminated or truncated:
+                    break
+
+        env.close()
+
+    def test_committed_flag_lifecycle(self):
+        """
+        committed=False before dispatch; True immediately after _assign_one_task();
+        False again once service completes (vehicle back to IDLE).
+        step() advances the sim to the next event, so by the time step() returns
+        the vehicle may have already finished — test handles both cases.
+        """
+        import warnings
+        from sim.entities import VehicleState
+
+        env = AirportEnv(schedule_path="schedule.json")
+        rng = np.random.default_rng(5)
+
+        dispatched_vehicles: set[str] = set()
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            env.reset()
+
+            for _ in range(400):
+                mask     = env.action_masks()
+                non_hold = [i for i in range(MAX_TASKS) if mask[i]]
+
+                if non_hold:
+                    action = non_hold[0]
+                    task   = env.dispatcher.pending_tasks[action]
+                    veh    = env.dispatcher._find_nearest_vehicle(
+                        task.service_type, task.gate_node
+                    )
+                    assert veh is not None
+                    assert not veh.committed, (
+                        f"{veh.vehicle_id} should not be committed before assignment"
+                    )
+
+                    # Call internal assignment directly to check committed=True
+                    # before the sim ticks forward
+                    env._assign_one_task(action)
+                    assert veh.committed, (
+                        f"{veh.vehicle_id} should be committed immediately after dispatch"
+                    )
+                    dispatched_vehicles.add(veh.vehicle_id)
+
+                    # Advance sim; reward doesn't matter for this test
+                    env._advance_to_decision()
+                else:
+                    _, _, terminated, truncated, _ = env.step(ACTION_HOLD)
+                    if terminated or truncated:
+                        break
+
+        # IDLE vehicles must have committed=False (cleared on service completion)
+        for vid in dispatched_vehicles:
+            v = env.dispatcher.vehicles.get(vid)
+            if v is not None and v.state == VehicleState.IDLE:
+                assert not v.committed, (
+                    f"{vid} is IDLE but committed=True — not cleared on completion"
+                )
+
+        env.close()
+
+
 # ── Event-trigger tests (Step 2) ──────────────────────────────────────────────
 
 class TestEventTrigger:

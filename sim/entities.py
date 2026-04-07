@@ -161,13 +161,14 @@ class Vehicle:
     assigned_to: Optional[str] = None    # flight_id
     path: list[str] = field(default_factory=list)
     service_end_time: float = 0.0
+    committed: bool = False              # True while executing an active task
 
     # Visual
     pixel_x: float = 0.0
     pixel_y: float = 0.0
 
     def is_available(self) -> bool:
-        return self.state == VehicleState.IDLE and self.assigned_to is None
+        return self.state == VehicleState.IDLE and self.assigned_to is None and not self.committed
 
     def __repr__(self) -> str:
         return f"<{self.vehicle_type} {self.vehicle_id} {self.state.value}>"

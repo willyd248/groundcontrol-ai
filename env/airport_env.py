@@ -145,6 +145,7 @@ REWARD_LATE_DEPARTURE     = +2.0    # departed > 5 min late
 REWARD_HOLD_WITH_WORK     = -0.1    # held when valid assignment existed
 REWARD_CONFLICT           = -50.0   # per new conflict detected
 REWARD_PENDING_AT_TIMEOUT = -20.0   # per flight still pending at truncation
+REWARD_ABANDONMENT        = -1.0    # per minute of service time wasted on an abandoned task
 
 # Safety limit: max sim-ticks between decision points before we force a return
 MAX_TICKS_PER_STEP = 3600          # 1 sim-hour
@@ -251,6 +252,8 @@ class AirportEnv(gym.Env):
         self._prev_delay_total     = 0.0
         self._prev_conflict_count  = 0
         self._departed_ids         = set()
+        self._abandoned_task_ids   = set()
+        self._abandoned_task_ids:  set[str] = set()
 
         # Run to the first decision point
         self._advance_to_decision()
@@ -332,6 +335,7 @@ class AirportEnv(gym.Env):
             return   # guard — should not happen with proper masking
 
         vehicle.assigned_to = task.flight_id
+        vehicle.committed   = True
         vehicle.state       = VehicleState.EN_ROUTE
         try:
             path = shortest_path(self.dispatcher.G, vehicle.position, task.gate_node)
@@ -462,6 +466,8 @@ class AirportEnv(gym.Env):
     def _compute_tick_reward(self) -> tuple[float, float]:
         """
         Compute (delay_reward, departure_reward) for the most recent sim tick.
+        Also applies abandonment penalty when a vehicle is detected mid-task
+        without actively working (e.g. after a force-release disruption).
         Updates internal state trackers.
         """
         now = self._sim_time
@@ -489,6 +495,24 @@ class AirportEnv(gym.Env):
                         REWARD_ONTIME_DEPARTURE if delay_min <= 5.0
                         else REWARD_LATE_DEPARTURE
                     )
+
+        # Abandonment penalty: active task whose vehicle is no longer EN_ROUTE/SERVICING.
+        # Fires only when a disruption force-releases a committed vehicle mid-task.
+        # In normal operation (no disruptions) this loop costs nothing — no orphaned tasks.
+        for task_id, task in self.dispatcher.active_tasks.items():
+            if task_id in self._abandoned_task_ids:
+                continue
+            vehicle = self.dispatcher.vehicles.get(task.assigned_vehicle_id)
+            if vehicle is None:
+                continue
+            if vehicle.state not in (VehicleState.EN_ROUTE, VehicleState.SERVICING):
+                # Vehicle was freed without completing this task
+                time_spent = (
+                    (now - task.started_at) / 60.0
+                    if task.started_at is not None else 0.0
+                )
+                dep_reward += REWARD_ABANDONMENT * max(0.0, time_spent)
+                self._abandoned_task_ids.add(task_id)
 
         return delay_reward, dep_reward
 

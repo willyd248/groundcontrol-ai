@@ -316,6 +316,8 @@ class Dispatcher:
         for v in self.vehicles.values():
             if not v.is_available():
                 continue
+            if v.committed:          # defensive: is_available() also checks this
+                continue
             if service_type == "fuel" and not isinstance(v, FuelTruck):
                 continue
             if service_type in ("baggage_unload", "baggage_load") and not isinstance(v, BaggageTug):
@@ -423,6 +425,7 @@ class Dispatcher:
                 vehicle.state = VehicleState.IDLE
                 vehicle.assigned_to = None
                 vehicle.service_end_time = 0.0
+                vehicle.committed = False
 
                 if isinstance(vehicle, FuelTruck):
                     vehicle.fuel_remaining -= ac.service_requirements.fuel_amount
