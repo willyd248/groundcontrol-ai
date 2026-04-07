@@ -1,0 +1,74 @@
+[
+  {
+    "_comment": "MD101: B777 arrives first — heavy fuel load (120s), 3-hr departure window. FCFS will dispatch both fuel trucks here first.",
+    "flight_id": "MD101",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 0,
+    "scheduled_departure": 10800,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "MD202: B777 arrives 60s later — same generous window. Second fuel truck goes here under FCFS.",
+    "flight_id": "MD202",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 60,
+    "scheduled_departure": 10860,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "MD303: B737 arrives at t=120 — TIGHT 45-min window. Both fuel trucks busy with B777s; waits 200s+ under FCFS.",
+    "flight_id": "MD303",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 120,
+    "scheduled_departure": 2820,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "MD404: A320 arrives at t=180 — TIGHT 40-min window. Same problem as MD303.",
+    "flight_id": "MD404",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 180,
+    "scheduled_departure": 2580,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "MD505: CRJ900 arrives at t=300 — moderate window.",
+    "flight_id": "MD505",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 300,
+    "scheduled_departure": 4500,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "MD606: B737 arrives at t=1800.",
+    "flight_id": "MD606",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 1800,
+    "scheduled_departure": 5400,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "MD707: A320 arrives at t=3600.",
+    "flight_id": "MD707",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 3600,
+    "scheduled_departure": 7200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "MD808: CRJ900 arrives at t=4500.",
+    "flight_id": "MD808",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 4500,
+    "scheduled_departure": 8100,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  }
+]

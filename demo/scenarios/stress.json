@@ -1,0 +1,110 @@
+[
+  {
+    "_comment": "ST101: B777 — arrives first, 3-hr window. FCFS sends FT1 here; ties it up for 120s fuel.",
+    "flight_id": "ST101",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 0,
+    "scheduled_departure": 10800,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST102: B777 — arrives 30s later, 3-hr window. FCFS sends FT2 here.",
+    "flight_id": "ST102",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 30,
+    "scheduled_departure": 10830,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST103: B737 — VERY TIGHT 38-min window. FCFS can't reach it until both fuel trucks free.",
+    "flight_id": "ST103",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 60,
+    "scheduled_departure": 2340,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST104: A320 — VERY TIGHT 38-min window. Same vehicle starvation under FCFS.",
+    "flight_id": "ST104",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 90,
+    "scheduled_departure": 2370,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST105: B737 — TIGHT 40-min window.",
+    "flight_id": "ST105",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 300,
+    "scheduled_departure": 2700,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST106: CRJ900 — TIGHT 35-min window.",
+    "flight_id": "ST106",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 300,
+    "scheduled_departure": 2400,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST107: B777 — arrives at t=600, generous window. Third B777 to compete for fuel trucks.",
+    "flight_id": "ST107",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 600,
+    "scheduled_departure": 10800,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST108: B737 — arrives t=900, moderate-tight 50-min window.",
+    "flight_id": "ST108",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 900,
+    "scheduled_departure": 3900,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST109: A320 — arrives t=1800.",
+    "flight_id": "ST109",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 1800,
+    "scheduled_departure": 5400,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST110: CRJ900 — arrives t=2700.",
+    "flight_id": "ST110",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 2700,
+    "scheduled_departure": 6300,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST111: B737 — arrives t=3600.",
+    "flight_id": "ST111",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 3600,
+    "scheduled_departure": 7200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "_comment": "ST112: B777 — arrives t=5400, generous window for tail-end.",
+    "flight_id": "ST112",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 5400,
+    "scheduled_departure": 12600,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  }
+]

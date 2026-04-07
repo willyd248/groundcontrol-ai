@@ -455,3 +455,102 @@ tensorboard --logdir runs/
 | `train/callbacks.py` | `AirportEvalCallback` + FCFS/policy episode runners |
 | `train/eval.py` | Standalone checkpoint evaluation script |
 | `checkpoints/` | Saved model checkpoints (every 50 k steps) |
+
+---
+
+## Session 4 — Split-Screen Demo
+
+### Overview
+
+A pygame split-screen demo that runs two simulator instances in lockstep on the
+same schedule, with the same fleet starting at t=0.  Left panel: FCFS dispatcher.
+Right panel: trained MaskablePPO agent.  A live scoreboard at the top shows the
+real-time delta.
+
+### Architecture
+
+```
+demo/side_by_side.py
+  ├── FCFSRunner       — thin wrapper around sim/dispatcher.py
+  ├── RLRunner         — wraps env/airport_env.py + MaskablePPO checkpoint
+  │     └── _DemoAirportEnv(AirportEnv)  — reset() without auto-advance
+  ├── PanelRenderer    — scaled (0.65×) pygame panel drawer
+  ├── ReplayRecorder   — snapshots every sim-second into memory
+  └── ReplayController — step backward/forward after episode ends
+demo/scoreboard.py     — live scoreboard surface renderer
+demo/replay.py         — FrameSnapshot, ReplayRecorder, ReplayController,
+                         _AircraftProxy / _VehicleProxy for rendering snapshots
+demo/recorder.py       — optional imageio-ffmpeg mp4 writer
+demo/scenarios/
+  easy.json            — 4 flights, well-spaced (agent wins by a little)
+  medium.json          — 8 flights, two B777s hog fuel trucks; B737/A320 starved
+  stress.json          — 12 flights, three simultaneous B777s + tight-window flights
+```
+
+### Determinism Guarantee
+
+Both runners are initialised from the **same JSON schedule file** with the
+**same fleet** (FT×2, BT×3, PB×2) at **t=0**.  `_DemoAirportEnv.reset()`
+skips the auto-advance-to-decision-point so both sides truly start at tick 0.
+There is no RNG in the FCFS dispatcher or the static schedule loader — all
+nondeterminism was removed at the schedule level.
+
+### Safety Checks
+
+- After every RL action: assert `_is_valid_assignment(action)` → halt on illegal action
+- After every tick (both sides): assert `conflict_count` didn't increase → halt on conflict
+- Both asserts print a loud `FATAL:` message and raise `RuntimeError`
+
+### Window Layout
+
+```
+┌──────────────────────────────────────────────────────────────┐  ← 190px scoreboard
+│ FCFS Baseline │  00:04:10  │ Trained Agent                   │
+│ delay, etc.   │  delta msg │ delay, etc.                     │
+├───────────────────────────────────┬──────────────────────────┤  ← 520px panels
+│  Left panel: FCFS  (scaled 0.65×) │ Right panel: Agent       │
+└───────────────────────────────────┴──────────────────────────┘
+  1560 px total
+```
+
+### Controls
+
+| Key | Action |
+|-----|--------|
+| SPACE | Pause / resume live run |
+| ← / → | Step one display-frame backward / forward (while paused or in replay) |
+| ESC | Quit |
+
+### Usage
+
+```bash
+# Live demo (medium scenario, default 60× speed)
+python -m demo.side_by_side \
+    --checkpoint checkpoints/latest.zip \
+    --scenario   demo/scenarios/medium.json
+
+# Record to mp4
+python -m demo.side_by_side \
+    --checkpoint checkpoints/latest.zip \
+    --scenario   demo/scenarios/stress.json \
+    --record     stress_demo.mp4
+
+# Slower speed for recording clarity
+python -m demo.side_by_side \
+    --checkpoint checkpoints/latest.zip \
+    --scenario   demo/scenarios/stress.json \
+    --speed 30 --record stress_demo.mp4
+```
+
+### Files Added
+
+| File | Purpose |
+|------|---------|
+| `demo/__init__.py` | Package init |
+| `demo/side_by_side.py` | Main entry point, runners, panel renderer |
+| `demo/scoreboard.py` | Live scoreboard surface renderer |
+| `demo/replay.py` | Snapshot system + replay controller + proxy objects |
+| `demo/recorder.py` | Optional imageio-ffmpeg mp4 writer |
+| `demo/scenarios/easy.json` | 4-flight benchmark (light traffic) |
+| `demo/scenarios/medium.json` | 8-flight benchmark (B777 fuel-truck contention) |
+| `demo/scenarios/stress.json` | 12-flight benchmark (3 B777s + tight windows) |
