@@ -4,84 +4,73 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Terms of Service — GroundControl AI</title>
-<meta name="description" content="Terms of Service for GroundControl AI, an AI-powered airport ground operations simulation.">
-<meta name="robots" content="noindex, follow">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23020403'/><circle cx='16' cy='16' r='11' fill='none' stroke='%2300ff41' stroke-width='1.5'/><line x1='16' y1='16' x2='25' y2='10' stroke='%2300ff41' stroke-width='1.5' opacity='.9'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#020403;--border:rgba(0,255,65,0.1);--t1:#a8ffa8;--t2:#4a7a4a;--t3:#2a4a2a;--green:#00ff41;--mono:'JetBrains Mono',monospace}
+:root{--bg:#020403;--bg2:#040604;--border:rgba(0,255,65,0.1);--t1:#a8ffa8;--t2:#4a7a4a;--t3:#2a4a2a;--green:#00ff41;--mono:'JetBrains Mono',monospace}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--mono);background:var(--bg);color:var(--t1);min-height:100vh}
-nav{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.nav-brand{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--green);text-transform:uppercase;text-decoration:none}
-.nav-back{font-size:10px;color:var(--t3);letter-spacing:1px;text-decoration:none;text-transform:uppercase;transition:color .15s}
-.nav-back:hover{color:var(--t1)}
-.content{max-width:680px;margin:0 auto;padding:60px 24px 80px}
-.page-label{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--t3);margin-bottom:16px}
-h1{font-size:22px;font-weight:700;color:#e8ffe8;margin-bottom:8px;letter-spacing:0.3px}
-.meta{font-size:10px;color:var(--t3);margin-bottom:48px;letter-spacing:0.5px}
-h2{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);margin:36px 0 12px;padding-left:12px;border-left:2px solid rgba(0,255,65,0.3)}
-p{font-size:11px;color:var(--t2);line-height:1.9;margin-bottom:16px;letter-spacing:0.2px}
-a{color:var(--green);text-decoration:none}
-a:hover{text-decoration:underline}
-.divider{height:1px;background:var(--border);margin:48px 0}
-footer{border-top:1px solid var(--border);padding:24px;text-align:center}
-.footer-links{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap}
-.footer-links a{font-size:10px;color:var(--t3);text-decoration:none;letter-spacing:0.8px;text-transform:uppercase;transition:color .15s}
+body{font-family:var(--mono);background:var(--bg);color:var(--t1);min-height:100vh;padding:0}
+.page-wrap{max-width:720px;margin:0 auto;padding:48px 32px 80px}
+.back-link{display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);text-decoration:none;margin-bottom:48px;transition:color .15s}
+.back-link:hover{color:var(--t1)}
+.back-link::before{content:'←'}
+.doc-eyebrow{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:12px}
+h1{font-size:22px;font-weight:700;color:var(--t1);letter-spacing:-.3px;margin-bottom:8px}
+.doc-meta{font-size:10px;color:var(--t3);margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.disclaimer{background:rgba(255,68,68,0.06);border:1px solid rgba(255,68,68,0.2);border-radius:2px;padding:16px 20px;margin-bottom:40px;font-size:11px;color:#ff8888;line-height:1.6}
+.disclaimer strong{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;color:#ff6666}
+h2{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);margin:36px 0 12px;padding-left:12px;border-left:2px solid rgba(0,255,65,0.3)}
+p{font-size:12px;color:var(--t2);line-height:1.8;margin-bottom:12px}
+footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.footer-brand{font-size:10px;color:var(--t3)}
+.footer-links{display:flex;gap:20px}
+.footer-links a{font-size:10px;color:var(--t3);text-decoration:none}
 .footer-links a:hover{color:var(--t1)}
+@media(max-width:600px){.page-wrap{padding:32px 20px 60px}}
 </style>
 </head>
 <body>
-<nav>
-  <a href="/" class="nav-brand">GroundControl AI</a>
-  <a href="/" class="nav-back">← Back</a>
-</nav>
+<div class="page-wrap">
+  <a class="back-link" href="/">GroundControl AI</a>
 
-<div class="content">
-  <div class="page-label">Legal</div>
+  <div class="doc-eyebrow">Legal</div>
   <h1>Terms of Service</h1>
-  <p class="meta">Last updated: April 6, 2026 · Effective immediately</p>
+  <div class="doc-meta">Effective date: April 6, 2026 · GroundControl AI</div>
 
-  <p>By accessing or using GroundControl AI ("the Service"), available at groundcontrol-ai.vercel.app, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.</p>
+  <div class="disclaimer">
+    <strong>⚠ Aviation disclaimer</strong>
+    GroundControl AI is a simulation tool built for demonstration purposes only. It does not use real operational data, is not FAA-certified, and must not be used to make actual dispatch, routing, or runway safety decisions. No reliance should be placed on this tool for live flight or ground operations.
+  </div>
 
-  <h2>1. Description of Service</h2>
-  <p>GroundControl AI is an interactive web-based simulation demonstrating AI-powered airport ground operations dispatch logic. The Service is provided for informational, educational, and demonstration purposes only. It does not represent a production aviation system, does not interface with any real airport infrastructure, and should not be relied upon for operational aviation decisions.</p>
+  <h2>1. Acceptance of Terms</h2>
+  <p>By accessing or using GroundControl AI at groundcontrol-ai.vercel.app (the "Service"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
 
-  <h2>2. Use of the Service</h2>
-  <p>You may access and use the Service for lawful personal or commercial purposes. You agree not to: (a) attempt to reverse engineer, decompile, or extract proprietary algorithms from the simulation; (b) use automated tools to scrape, crawl, or stress-test the Service; (c) represent the simulation's output as real operational data; or (d) use the Service in any manner that violates applicable laws or regulations.</p>
+  <h2>2. Description of Service</h2>
+  <p>GroundControl AI is a browser-based simulation of airport ground operations dispatch. It visualizes how an AI system might coordinate ground support vehicles across airport gates and runways. The simulation uses procedurally generated data and does not represent any real airport, flight, vehicle, or personnel.</p>
+  <p>The Service is provided for educational, demonstration, and portfolio purposes only.</p>
 
-  <h2>3. Intellectual Property</h2>
-  <p>All content, code, design, and simulation logic comprising the Service are the intellectual property of Will DiMaio unless otherwise noted. You may not reproduce, distribute, or create derivative works without prior written permission. The simulation scenario and airport layout are fictional representations for demonstration purposes only.</p>
+  <h2>3. No Warranty / Disclaimer</h2>
+  <p>The Service is provided "as is" and "as available" without warranties of any kind, express or implied. Will DiMaio makes no warranty that the Service will be uninterrupted, error-free, or accurate. The simulation data is entirely fictional and is not suitable for any operational use.</p>
+  <p>This tool is not affiliated with, endorsed by, or certified by the FAA, ICAO, any airline, or any airport authority.</p>
 
-  <h2>4. No Warranties</h2>
-  <p>The Service is provided "as is" and "as available" without warranties of any kind, express or implied. We make no representations that the Service will be uninterrupted, error-free, or suitable for any particular purpose. The simulation data (vehicle counts, turnaround times, dispatch intervals) is illustrative and does not represent real-world performance guarantees.</p>
+  <h2>4. Intellectual Property</h2>
+  <p>All code, design, and content comprising GroundControl AI is owned by Will DiMaio unless otherwise stated. You may not reproduce, distribute, or create derivative works without written permission.</p>
 
   <h2>5. Limitation of Liability</h2>
-  <p>To the fullest extent permitted by applicable law, Will DiMaio and GroundControl AI shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of or inability to use the Service, including but not limited to loss of data, loss of revenue, or business interruption.</p>
+  <p>To the fullest extent permitted by law, Will DiMaio shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of, or inability to use, the Service. In no event shall total liability exceed zero dollars, as the Service is provided free of charge.</p>
 
-  <h2>6. Privacy</h2>
-  <p>Your use of the Service is also governed by our <a href="/privacy.html">Privacy Policy</a>, which is incorporated into these Terms by reference.</p>
+  <h2>6. Changes to Terms</h2>
+  <p>Will DiMaio reserves the right to update these Terms at any time. Continued use of the Service after changes constitutes acceptance of the updated Terms. The effective date at the top of this page will reflect the most recent revision.</p>
 
-  <h2>7. Changes to Terms</h2>
-  <p>We reserve the right to modify these Terms at any time. Changes will be effective immediately upon posting to the Service. Your continued use of the Service after any changes constitutes your acceptance of the new Terms.</p>
+  <h2>7. Contact</h2>
+  <p>Questions about these Terms can be directed to Will DiMaio via <a href="https://github.com/willyd248/groundcontrol-ai" style="color:var(--t2)">GitHub</a>.</p>
 
-  <h2>8. Governing Law</h2>
-  <p>These Terms shall be governed by and construed in accordance with the laws of the State of New York, without regard to its conflict of law provisions. Any disputes arising under these Terms shall be subject to the exclusive jurisdiction of the courts located in New York County, New York.</p>
-
-  <h2>9. Contact</h2>
-  <p>For questions regarding these Terms, contact Will DiMaio via <a href="https://github.com/willyd248" target="_blank" rel="noopener">GitHub</a>.</p>
-
-  <div class="divider"></div>
-  <p style="font-size:10px;color:var(--t3)">GroundControl AI is a simulation product. It is not affiliated with, endorsed by, or connected to JFK International Airport, Port Authority of New York and New Jersey, or any airline or aviation authority.</p>
+  <footer>
+    <span class="footer-brand">GROUNDCONTROL AI — Will DiMaio</span>
+    <nav class="footer-links">
+      <a href="/">Home</a>
+      <a href="/privacy.html">Privacy Policy</a>
+    </nav>
+  </footer>
 </div>
-
-<footer>
-  <nav class="footer-links" aria-label="Footer navigation">
-    <a href="/">Home</a>
-    <a href="/terms.html">Terms of Service</a>
-    <a href="/privacy.html">Privacy Policy</a>
-    <a href="https://github.com/willyd248" target="_blank" rel="noopener">GitHub</a>
-  </nav>
-</footer>
 </body>
 </html>

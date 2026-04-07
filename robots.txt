@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-
 Sitemap: https://groundcontrol-ai.vercel.app/sitemap.xml
