@@ -15,11 +15,15 @@
 <meta name="twitter:description" content="Real-time AI dispatch simulation of JFK Terminal 4. Autonomous vehicles, runway safety, live analytics.">
 <meta name="twitter:image" content="https://groundcontrol-ai.vercel.app/og-image.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23020403'/><circle cx='16' cy='16' r='11' fill='none' stroke='%2300ff41' stroke-width='1.5'/><circle cx='16' cy='16' r='6' fill='none' stroke='%2300ff41' stroke-width='.8' opacity='.5'/><line x1='16' y1='5' x2='16' y2='27' stroke='%2300ff41' stroke-width='.8' opacity='.4'/><line x1='5' y1='16' x2='27' y2='16' stroke='%2300ff41' stroke-width='.8' opacity='.4'/><line x1='16' y1='16' x2='25' y2='10' stroke='%2300ff41' stroke-width='1.5' opacity='.9'/></svg>">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"GroundControl AI","url":"https://groundcontrol-ai.vercel.app","description":"Real-time AI dispatch simulation of JFK Terminal 4 ground operations. Autonomous vehicles, runway safety monitoring, and live turnaround analytics.","applicationCategory":"Simulation","operatingSystem":"Web","author":{"@type":"Person","name":"Will DiMaio"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+</script>
 <style>
 :root{--bg:#020403;--bg2:#040604;--bg3:#070a07;--border:rgba(0,255,65,0.1);--t1:#a8ffa8;--t2:#4a7a4a;--t3:#2a4a2a;--blue:#00ccff;--green:#00ff41;--amber:#FFB000;--red:#FF4444;--purple:#cc99ff;--cyan:#00ffdd;--mono:'JetBrains Mono',monospace;--sans:'JetBrains Mono',monospace}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidden;height:100vh;width:100vw}
+body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow-x:hidden;width:100vw}
+#sim-section{position:relative;height:100vh;overflow:hidden;width:100vw}
 
 #map-wrap{position:absolute;top:0;left:0;right:320px;bottom:48px;background:var(--bg)}
 #map-wrap canvas{display:block;width:100%;height:100%}
@@ -130,7 +134,7 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 
 /* ── Mobile ── */
 @media(max-width:768px){
-  body{overflow-y:auto;height:auto}
+  #sim-section{height:auto;overflow:visible}
   #map-wrap{position:relative;left:0;right:0;bottom:0;height:55vw;min-height:260px}
   #right-panel{position:relative;width:100%;height:280px;border-left:none;border-top:1px solid var(--border)}
   #kpi{position:sticky;bottom:0;height:auto;min-height:40px;flex-wrap:wrap;padding:6px 12px;gap:6px 0;row-gap:4px}
@@ -146,9 +150,173 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
 @keyframes fl{0%,100%{opacity:1}50%{opacity:.6}}
 @keyframes si{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+
+/* ═══════════════════════════════════════
+   LANDING PAGE
+═══════════════════════════════════════ */
+#landing{background:var(--bg)}
+nav#nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:16px 40px;border-bottom:1px solid rgba(0,255,65,0.07);background:rgba(2,4,3,0.92);backdrop-filter:blur(16px)}
+.nav-logo{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:2.5px;color:var(--green);text-shadow:0 0 12px rgba(0,255,65,0.25);display:flex;align-items:center;gap:8px}
+.nav-logo-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pd 2s infinite;box-shadow:0 0 6px var(--green)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{font-family:var(--mono);font-size:10px;color:var(--t2);text-decoration:none;letter-spacing:1.2px;text-transform:uppercase;transition:color .15s}
+.nav-links a:hover{color:var(--t1)}
+.nav-cta{background:rgba(0,255,65,0.07)!important;border:1px solid rgba(0,255,65,0.25)!important;color:var(--green)!important;padding:6px 16px!important;border-radius:2px!important}
+.nav-cta:hover{background:rgba(0,255,65,0.13)!important}
+
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:120px 40px 80px;max-width:1100px;margin:0 auto;width:100%}
+.hero-eyebrow{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2.5px;color:var(--t3);text-transform:uppercase;border:1px solid rgba(0,255,65,0.12);padding:5px 12px;border-radius:2px;display:inline-flex;align-items:center;gap:8px;margin-bottom:36px;width:fit-content}
+.hero-eyebrow-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pd 2s infinite;box-shadow:0 0 5px var(--green)}
+h1.hero-title{font-family:'Inter',var(--mono);font-size:clamp(38px,5.5vw,76px);font-weight:700;line-height:1.05;letter-spacing:-2px;color:var(--t1);margin-bottom:28px}
+h1.hero-title .hl{color:var(--green);text-shadow:0 0 40px rgba(0,255,65,0.2)}
+p.hero-sub{font-family:'Inter',var(--mono);font-size:16px;line-height:1.7;color:var(--t2);max-width:520px;margin-bottom:44px}
+a.hero-cta{display:inline-flex;align-items:center;gap:10px;background:rgba(0,255,65,0.08);border:1px solid rgba(0,255,65,0.3);color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;padding:14px 28px;border-radius:2px;transition:background .15s,box-shadow .15s;margin-bottom:72px;width:fit-content;box-shadow:0 0 0 rgba(0,255,65,0)}
+a.hero-cta:hover{background:rgba(0,255,65,0.13);box-shadow:0 0 28px rgba(0,255,65,0.12)}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);background:rgba(0,255,65,0.08);gap:1px}
+.stat{background:var(--bg);padding:24px 20px}
+.stat-val{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--t1);letter-spacing:-0.5px;margin-bottom:8px;font-variant-numeric:tabular-nums}
+.stat-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase}
+
+.lp-section{padding:80px 40px;max-width:1100px;margin:0 auto;width:100%;border-top:1px solid rgba(0,255,65,0.06)}
+.section-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:2.5px;color:var(--t3);text-transform:uppercase;margin-bottom:36px}
+.features-grid{display:grid;grid-template-columns:repeat(2,1fr);background:rgba(0,255,65,0.06);gap:1px}
+.feat-card{background:var(--bg);padding:28px 24px;transition:background .15s}
+.feat-card:hover{background:rgba(0,255,65,0.015)}
+.feat-icon{font-size:18px;margin-bottom:16px;color:var(--green);opacity:.75}
+.feat-title{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--t1);margin-bottom:10px;text-transform:uppercase}
+.feat-desc{font-family:'Inter',var(--mono);font-size:13px;line-height:1.65;color:var(--t2)}
+
+.steps{display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:72px 1fr;gap:16px;padding:24px 0;border-bottom:1px solid rgba(0,255,65,0.05)}
+.step:last-child{border-bottom:none}
+.step-num{font-family:var(--mono);font-size:10px;font-weight:700;color:rgba(0,255,65,0.25);padding-top:3px;letter-spacing:1px}
+.step-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t1);margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase}
+.step-desc{font-family:'Inter',var(--mono);font-size:13px;line-height:1.65;color:var(--t2)}
+
+.sim-divider{display:flex;align-items:center;justify-content:space-between;padding:12px 40px;background:rgba(0,0,0,0.35);border-top:1px solid rgba(0,255,65,0.1);border-bottom:1px solid rgba(0,255,65,0.06)}
+.sim-divider-left{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;color:var(--t1);font-weight:600;letter-spacing:.5px}
+.sim-divider-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pd 2s infinite;box-shadow:0 0 6px var(--green)}
+.sim-divider-right{font-family:var(--mono);font-size:10px;color:var(--t3);letter-spacing:.3px}
+
+footer#footer{background:var(--bg2);border-top:1px solid rgba(0,255,65,0.07);padding:28px 40px}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;max-width:1100px;margin:0 auto}
+.footer-brand{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.8px;color:var(--green);margin-bottom:3px}
+.footer-tagline{font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:.5px}
+.footer-links{display:flex;align-items:center;gap:12px}
+.footer-links a{font-family:var(--mono);font-size:10px;color:var(--t2);text-decoration:none;transition:color .15s;letter-spacing:.3px}
+.footer-links a:hover{color:var(--t1)}
+.footer-sep{color:rgba(0,255,65,0.15);font-family:var(--mono);font-size:10px}
+.footer-copy{font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:.3px}
+
+@media(max-width:768px){
+  nav#nav{padding:12px 20px}
+  .nav-links{gap:16px}
+  .nav-links a:not(.nav-cta){display:none}
+  #hero{padding:96px 20px 60px}
+  h1.hero-title{letter-spacing:-1px}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .lp-section{padding:56px 20px}
+  .features-grid{grid-template-columns:1fr}
+  .sim-divider{padding:10px 20px;flex-direction:column;align-items:flex-start;gap:4px}
+  footer#footer{padding:24px 20px}
+  .footer-inner{flex-direction:column;align-items:flex-start;gap:12px}
+}
 </style>
 </head>
 <body>
+
+<!-- ── Landing Page ── -->
+<div id="landing">
+  <nav id="nav">
+    <div class="nav-logo"><span class="nav-logo-dot"></span>GROUNDCONTROL AI</div>
+    <div class="nav-links">
+      <a href="#sim-section">Live Demo</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="#sim-section" class="nav-cta">Launch Sim →</a>
+    </div>
+  </nav>
+
+  <section id="hero">
+    <div class="hero-eyebrow"><span class="hero-eyebrow-dot"></span>JFK TERMINAL 4 · SIMULATION MODE</div>
+    <h1 class="hero-title">AI-dispatched airport<br>ground ops. <span class="hl">Real-time.</span></h1>
+    <p class="hero-sub">Gate conflicts, manual dispatch, and turnaround delays cost airlines $62/minute. GroundControl dispatches 18 ground vehicles autonomously using real-time constraint solving — no human in the loop.</p>
+    <a class="hero-cta" href="#sim-section">Watch AI dispatch live ↓</a>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-val">18</div><div class="stat-label">Vehicles Coordinated</div></div>
+      <div class="stat"><div class="stat-val">8</div><div class="stat-label">Active Gates</div></div>
+      <div class="stat"><div class="stat-val">~4:20</div><div class="stat-label">Avg Turnaround Saved</div></div>
+      <div class="stat"><div class="stat-val">100ms</div><div class="stat-label">Dispatch Cycle</div></div>
+    </div>
+  </section>
+
+  <div class="lp-section">
+    <div class="section-label">System Capabilities</div>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon">◈</div>
+        <div class="feat-title">Surface Radar</div>
+        <div class="feat-desc">ASDE-X style display of all ground vehicles and aircraft across 8 active gates and 2 runways. Live positions updated every 100ms.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⬡</div>
+        <div class="feat-title">Autonomous Dispatch</div>
+        <div class="feat-desc">Constraint-solving AI assigns fuel, baggage, catering, and pushback units every 8 seconds without any manual input or operator override.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚠</div>
+        <div class="feat-title">Runway Safety</div>
+        <div class="feat-desc">Real-time incursion prevention. Ground vehicles auto-hold when aircraft are on approach — alerts fire at 90s and 30s separation intervals.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">◉</div>
+        <div class="feat-title">Fleet Telemetry</div>
+        <div class="feat-desc">Live transponder data for every vehicle: driver ID, current task, speed, heading, and full service history. Click any blip to pull its data block.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lp-section">
+    <div class="section-label">How It Works</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <div class="step-title">Aircraft Arrival Detected</div>
+          <div class="step-desc">Inbound flights are queued and routed to active gates. The radar tracks approach on runways 13L/31R and 13R/31L in real time.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <div class="step-title">AI Resolves Assignment</div>
+          <div class="step-desc">The dispatch engine checks vehicle availability, routing conflicts, and service priority queues — then assigns autonomously.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <div class="step-title">Ground Ops Execute</div>
+          <div class="step-desc">Fuel, baggage, catering, GPU, and water trucks navigate to gate, service the aircraft, and return to the vehicle hub.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <div class="step-title">Pushback Cleared</div>
+          <div class="step-desc">Once all services are complete, the pushback tractor is dispatched. The aircraft is cleared for departure and the gate cycles.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sim-divider">
+    <div class="sim-divider-left"><span class="sim-divider-dot"></span>LIVE SIMULATION — JFK Terminal 4</div>
+    <div class="sim-divider-right">AI dispatch active · 18 vehicles · 8 gates · 2 runways</div>
+  </div>
+</div>
+
 <!-- Onboarding overlay -->
 <div id="onboarding">
   <div class="ob-card">
@@ -186,6 +354,8 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
     <button class="ob-btn" id="ob-dismiss">BEGIN OPERATIONS</button>
   </div>
 </div>
+
+<section id="sim-section">
 <div id="map-wrap">
   <canvas id="cv"></canvas>
   <div id="emb"></div>
@@ -217,6 +387,24 @@ body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow:hidde
   <div class="kc" id="kcl">--:--:-- EST</div>
   <button id="pause-btn" title="Space to pause/resume">⏸ PAUSE</button>
 </div>
+</section>
+
+<footer id="footer">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">GROUNDCONTROL AI</div>
+      <div class="footer-tagline">Airport ground operations simulation.</div>
+    </div>
+    <div class="footer-links">
+      <a href="terms.html">Terms of Service</a>
+      <span class="footer-sep">·</span>
+      <a href="privacy.html">Privacy Policy</a>
+      <span class="footer-sep">·</span>
+      <a href="https://github.com/willyd248/Airport" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="footer-copy">Built by Will DiMaio · 2025</div>
+  </div>
+</footer>
 
 <script>
 // ═══════════════════════════════════════════════════
