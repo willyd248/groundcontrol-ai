@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GroundControl AI — Autonomous Dispatch Simulation</title>
+<meta name="description" content="AI autonomous dispatch simulation for airport ground operations. 18 vehicle types, live constraint solving, runway safety monitoring. The AI layer of GroundControl's autonomous airport proof of concept.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://groundcontrol-ai.vercel.app/">
+<link rel="sitemap" type="application/xml" href="/sitemap.xml">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://groundcontrol-ai.vercel.app/">
+<meta property="og:title" content="GroundControl AI — AI-Powered Airport Ground Operations">
+<meta property="og:description" content="Live simulation of AI-driven ground handling dispatch. See how machine learning optimizes vehicle routing and reduces aircraft turnaround times.">
+<meta property="og:image" content="https://groundcontrol-ai.vercel.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="GroundControl AI — AI-Powered Airport Ground Operations">
+<meta name="twitter:description" content="Live simulation of AI-driven ground handling dispatch. Watch autonomous vehicles coordinate across gates, runways, and service areas.">
+<meta name="twitter:image" content="https://groundcontrol-ai.vercel.app/og-image.png">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "GroundControl AI",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "AI-powered airport ground operations management system. Optimizes vehicle dispatch, runway safety monitoring, and ground handling coordination in real time.",
+    "url": "https://groundcontrol-ai.vercel.app/",
+    "screenshot": "https://groundcontrol-ai.vercel.app/og-image.png",
+    "keywords": ["airport ground operations", "airport dispatch optimization", "ground handling simulation", "AI airport management", "ramp operations AI"]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "GroundControl AI",
+    "url": "https://groundcontrol-ai.vercel.app/",
+    "description": "Building AI systems for airport ground operations and dispatch optimization."
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What are AI airport ground operations?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "AI airport ground operations use machine learning to automate and optimize ramp activities including vehicle dispatch, gate assignments, fueling routes, and baggage handling. GroundControl AI simulates this in real time, showing how AI reduces aircraft turnaround times and prevents runway incursions."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does airport dispatch optimization work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Airport dispatch optimization uses algorithms to assign ground support vehicles — tugs, fuel trucks, catering units — to arriving and departing aircraft based on proximity, task priority, gate load, and runway safety state. GroundControl AI demonstrates this with a live simulation that processes inbound flight queues and issues optimized dispatch orders in real time."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is a ground handling simulation?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A ground handling simulation models the full lifecycle of aircraft servicing between landing and takeoff — including vehicle routing, crew coordination, fueling, catering, and pushback. GroundControl AI provides a browser-based radar simulation with 18+ vehicle types, live dispatch logs, and a Runway Safety System panel."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can AI reduce airport turnaround times?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. By optimizing ground vehicle dispatch and minimizing idle time, AI systems can reduce aircraft gate turnaround times by 10–25%. GroundControl AI visualizes this optimization in a real-time simulation."
+        }
+      }
+    ]
+  }
+]
+</script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23020403'/><circle cx='16' cy='16' r='11' fill='none' stroke='%2300ff41' stroke-width='1.5'/><circle cx='16' cy='16' r='6' fill='none' stroke='%2300ff41' stroke-width='.8' opacity='.5'/><line x1='16' y1='5' x2='16' y2='27' stroke='%2300ff41' stroke-width='.8' opacity='.4'/><line x1='5' y1='16' x2='27' y2='16' stroke='%2300ff41' stroke-width='.8' opacity='.4'/><line x1='16' y1='16' x2='25' y2='10' stroke='%2300ff41' stroke-width='1.5' opacity='.9'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#020403;--bg2:#040604;--bg3:#070a07;--border:rgba(0,255,65,0.1);--t1:#a8ffa8;--t2:#4a7a4a;--t3:#2a4a2a;--blue:#00ccff;--green:#00ff41;--amber:#FFB000;--red:#FF4444;--purple:#cc99ff;--cyan:#00ffdd;--mono:'JetBrains Mono',monospace;--sans:'JetBrains Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--mono);background:var(--bg);color:var(--t1);overflow-x:hidden;width:100vw;scroll-behavior:smooth}
+
+/* ── Landing hero ── */
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:0 48px;position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+#hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 60% 50%,rgba(0,255,65,0.04) 0%,transparent 70%);pointer-events:none}
+.hero-eyebrow{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--t3);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.hero-eyebrow::before{content:'';display:inline-block;width:24px;height:1px;background:var(--green);opacity:.4}
+h1.hero-headline{font-size:clamp(28px,4vw,52px);font-weight:700;color:var(--t1);line-height:1.1;letter-spacing:-.5px;margin-bottom:20px;max-width:640px}
+h1.hero-headline em{color:var(--green);font-style:normal;text-shadow:0 0 30px rgba(0,255,65,.3)}
+.hero-sub{font-size:13px;color:var(--t2);line-height:1.7;max-width:520px;margin-bottom:40px}
+.hero-cta{display:inline-flex;align-items:center;gap:10px;background:rgba(0,255,65,.08);border:1px solid rgba(0,255,65,.3);color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:13px 28px;text-decoration:none;border-radius:2px;cursor:pointer;transition:background .15s,box-shadow .15s}
+.hero-cta:hover{background:rgba(0,255,65,.14);box-shadow:0 0 20px rgba(0,255,65,.12)}
+.hero-stats{display:flex;gap:48px;margin-top:64px;padding-top:40px;border-top:1px solid var(--border)}
+.hs-item{display:flex;flex-direction:column;gap:6px}
+.hs-value{font-size:28px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.hs-unit{font-size:9px;font-weight:700;color:var(--green);letter-spacing:1.5px;text-transform:uppercase}
+.hs-label{font-size:9px;color:var(--t3);letter-spacing:.8px;text-transform:uppercase}
+.hero-grid-bg{position:absolute;inset:0;pointer-events:none;opacity:.4}
+
+/* ── Simulation section ── */
+#simulation{position:relative;height:100vh;overflow:hidden}
+.sim-header{position:absolute;top:0;left:0;right:0;height:32px;background:rgba(2,4,3,.98);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;z-index:10;backdrop-filter:blur(8px);flex-shrink:0}
+.sim-header-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2)}
+.sim-header-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pd 2s infinite;box-shadow:0 0 6px var(--green)}
+.sim-header-divider{width:1px;height:14px;background:var(--border)}
+
+#map-wrap{position:absolute;top:32px;left:0;right:320px;bottom:48px;background:var(--bg)}
+#map-wrap canvas{display:block;width:100%;height:100%}
+#right-panel{position:absolute;top:32px;right:0;width:320px;bottom:48px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;z-index:5}
+#kpi{position:absolute;bottom:0;left:0;right:0;height:48px;background:rgba(2,4,3,.98);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 20px;font-family:var(--mono);z-index:5;backdrop-filter:blur(8px)}
+
+/* ── Footer ── */
+#site-footer{padding:32px 48px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.footer-brand{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--t3)}
+.footer-links{display:flex;gap:24px}
+.footer-links a{font-size:10px;color:var(--t3);text-decoration:none;letter-spacing:.5px;transition:color .15s}
+.footer-links a:hover{color:var(--t1)}
+
+.ps{flex:1;min-height:0;display:flex;flex-direction:column}
+#dsp{flex:3}
+#flp{flex:2}
+.ps+.ps{border-top:1px solid var(--border)}
+.ph{padding:10px 16px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.06);border-left:2px solid rgba(0,255,65,0.3)}
+.pt{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t1);display:flex;align-items:center;gap:8px}
+.pt .ld{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pd 2s infinite;box-shadow:0 0 6px var(--green)}
+.pt-right{margin-left:auto;font-size:9px;font-weight:400;color:var(--t3);letter-spacing:.5px}
+.pst{font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:3px;letter-spacing:.5px}
+.pb{flex:1;min-height:0;overflow-y:auto;padding:0 10px 10px}
+.pb::-webkit-scrollbar{width:3px}
+.pb::-webkit-scrollbar-track{background:transparent}
+.pb::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
+
+#inbound-section{flex-shrink:0;padding:0 12px 8px;border-bottom:1px solid var(--border)}
+#inbound-section .iq-title{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);padding:8px 4px 6px}
+.iq-row{display:flex;align-items:center;gap:8px;padding:4px;font-family:var(--mono);font-size:10px;color:var(--t2)}
+.iq-row .iq-icon{color:rgba(255,255,255,0.4);font-size:11px}
+.iq-row .iq-flight{color:var(--t1);font-weight:500;min-width:52px}
+.iq-row .iq-gate{color:var(--t3);min-width:52px}
+.iq-row .iq-eta{color:var(--amber);min-width:48px;text-align:right}
+.iq-bar{flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden}
+.iq-bar-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .5s linear}
+
+.de{font-family:var(--mono);font-size:10.5px;padding:5px 8px;border-radius:4px;color:var(--t2);line-height:1.4;animation:si .2s ease-out;margin-bottom:2px;display:flex;align-items:baseline;gap:6px}
+.de:hover{background:rgba(255,255,255,0.02)}
+.de.em-row{background:rgba(239,68,68,0.08);border-left:2px solid var(--red)}
+.de .dt{color:var(--t3);flex-shrink:0;font-size:10px}
+.de .di{flex-shrink:0;font-size:9px}
+.de .dx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.de.ai-opt .dx{white-space:normal;overflow:visible;text-overflow:clip}
+.de .dg{flex-shrink:0;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;letter-spacing:.3px}
+.dg.a{background:rgba(0,255,65,.08);color:#00ff41;border:1px solid rgba(0,255,65,.2)}
+.dg.c{background:rgba(0,255,65,.06);color:#a8ffa8;border:1px solid rgba(0,255,65,.15)}
+.dg.v{background:rgba(255,68,68,.1);color:#ff7070;border:1px solid rgba(255,68,68,.25)}
+.dg.e{background:rgba(255,68,68,.12);color:#ff7070;border:1px solid rgba(255,68,68,.3)}
+.dg.w{background:rgba(255,176,0,.08);color:#ffb000;border:1px solid rgba(255,176,0,.2)}
+#nxt{font-family:var(--mono);font-size:10px;color:var(--t3);padding:8px 16px;border-top:1px solid var(--border);flex-shrink:0;text-align:center}
+
+.fr{display:grid;grid-template-columns:3px 56px 62px 1fr 40px;align-items:center;gap:5px;padding:5px 6px 5px 0;border-radius:0 4px 4px 0;font-family:var(--mono);font-size:10.5px;cursor:pointer;transition:background .1s}
+.fr:hover{background:rgba(255,255,255,.03)}
+.fr.sel{background:rgba(59,130,246,.08)}
+.fr .fl-border{width:3px;height:100%;border-radius:2px;align-self:stretch}
+.fi{color:var(--t1);font-weight:500;white-space:nowrap}
+.fb{font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;text-align:center;white-space:nowrap}
+.fb.i{background:rgba(0,255,65,.03);color:var(--t3);border:1px solid rgba(0,255,65,.08)}
+.fb.d{background:rgba(0,204,255,.08);color:#00ccff;border:1px solid rgba(0,204,255,.2)}
+.fb.s{background:rgba(255,176,0,.08);color:#ffb000;border:1px solid rgba(255,176,0,.2)}
+.fb.r{background:rgba(0,255,65,.06);color:#a8ffa8;border:1px solid rgba(0,255,65,.15)}
+.fb.vl{background:rgba(255,68,68,.1);color:#ff7070;border:1px solid rgba(255,68,68,.25);animation:fl .8s infinite}
+.fb.em{background:rgba(255,68,68,.12);color:#ff7070;border:1px solid rgba(255,68,68,.3);animation:fl .5s infinite}
+.fds{color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
+.ft{color:var(--t3);text-align:right;font-size:10px;font-variant-numeric:tabular-nums}
+.fr .svc-bar{grid-column:2/6;height:3px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;margin-top:2px}
+.fr .svc-bar-fill{height:100%;border-radius:2px;transition:width .3s}
+
+.kb{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--green);letter-spacing:1.5px;display:flex;align-items:center;gap:8px;margin-right:24px;text-shadow:0 0 8px rgba(0,255,65,0.5)}
+.kb .ld{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pd 2s infinite;box-shadow:0 0 8px var(--green)}
+.kd{width:1px;height:24px;background:rgba(0,255,65,.12);margin:0 12px}
+.ki{display:flex;flex-direction:column;gap:2px;padding:0 4px}
+.kl{font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:1.2px}
+.ki-row{display:flex;align-items:baseline;gap:4px}
+.kv{font-size:13px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;min-width:20px;transition:color .3s;letter-spacing:-.3px}
+.kv.al{color:var(--red);text-shadow:0 0 6px rgba(255,68,68,0.5)}
+.ku{font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px}
+.kc{margin-left:auto;font-size:11px;color:var(--t2);font-weight:500;letter-spacing:.5px}
+#pause-btn{background:none;border:1px solid rgba(0,255,65,0.2);color:var(--t2);font-family:var(--mono);font-size:9px;padding:2px 10px;border-radius:2px;cursor:pointer;letter-spacing:.5px;margin-left:16px}
+#pause-btn:hover{color:var(--t1);border-color:rgba(0,255,65,0.4)}
+#pause-btn.paused{color:var(--amber);border-color:rgba(255,176,0,0.4)}
+
+#vc{position:absolute;bottom:16px;right:8px;width:270px;background:rgba(2,4,3,.98);border:1px solid rgba(0,255,65,.2);border-radius:2px;padding:16px;z-index:1000;display:none;backdrop-filter:blur(12px);box-shadow:0 0 20px rgba(0,255,65,.05),inset 0 0 40px rgba(0,255,65,.02)}
+.vh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.vn{font-family:var(--mono);font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;letter-spacing:.5px}
+.vn .vn-dot{width:8px;height:8px;border-radius:50%}
+.vs{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 8px;border-radius:2px;letter-spacing:.5px}
+.vx{background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:2px 6px;line-height:1;border-radius:2px;font-family:var(--mono)}
+.vx:hover{color:var(--t1);background:rgba(0,255,65,0.05)}
+.vdv{height:1px;background:rgba(0,255,65,.08);margin:10px 0}
+.vr{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;padding:3px 0}
+.vr .vk{color:var(--t3)}.vr .vv{color:var(--t2)}
+.vht{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--t3);margin-bottom:6px}
+.vhi{font-family:var(--mono);font-size:10px;color:var(--t3);padding:2px 0}
+
+#emb{position:absolute;bottom:0;left:0;right:0;height:40px;background:rgba(180,0,0,0.9);display:none;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#ff8888;z-index:20;letter-spacing:1px;border-top:1px solid rgba(255,68,68,.5)}
+#map-wrap.emergency{box-shadow:inset 0 0 80px rgba(255,68,68,0.1)}
+
+/* ── Onboarding Overlay ── */
+#onboarding{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#onboarding.hidden{display:none}
+.ob-card{background:#040604;border:1px solid rgba(0,255,65,.25);border-radius:2px;width:min(560px,92vw);padding:28px 32px;box-shadow:0 0 60px rgba(0,255,65,.08),inset 0 0 80px rgba(0,255,65,.02)}
+.ob-header{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:6px}
+.ob-title{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green);letter-spacing:.5px;margin-bottom:4px;text-shadow:0 0 20px rgba(0,255,65,.4)}
+.ob-sub{font-family:var(--mono);font-size:10px;color:var(--t3);margin-bottom:22px;letter-spacing:.3px}
+.ob-divider{height:1px;background:rgba(0,255,65,.1);margin-bottom:20px}
+.ob-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+.ob-item{border:1px solid rgba(0,255,65,.1);border-radius:2px;padding:12px 14px;background:rgba(0,255,65,.02)}
+.ob-item-icon{font-size:16px;margin-bottom:6px}
+.ob-item-title{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--green);margin-bottom:4px}
+.ob-item-desc{font-family:var(--mono);font-size:9.5px;color:var(--t2);line-height:1.5}
+.ob-controls{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.ob-ctrl{font-family:var(--mono);font-size:9px;color:var(--t2);display:flex;align-items:center;gap:6px}
+.ob-key{background:rgba(0,255,65,.08);border:1px solid rgba(0,255,65,.2);border-radius:2px;padding:2px 6px;font-family:var(--mono);font-size:9px;color:var(--t1)}
+.ob-btn{width:100%;padding:11px;background:rgba(0,255,65,.08);border:1px solid rgba(0,255,65,.3);border-radius:2px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;color:var(--green);cursor:pointer;text-transform:uppercase;transition:background .15s,box-shadow .15s}
+.ob-btn:hover{background:rgba(0,255,65,.14);box-shadow:0 0 16px rgba(0,255,65,.15)}
+
+/* ── Mobile ── */
+@media(max-width:768px){
+  #hero{padding:0 24px;min-height:100svh}
+  .hero-stats{gap:28px;flex-wrap:wrap}
+  #simulation{height:auto}
+  #map-wrap{position:relative;top:0;left:0;right:0;bottom:0;height:55vw;min-height:260px}
+  #right-panel{position:relative;top:0;width:100%;height:280px;border-left:none;border-top:1px solid var(--border)}
+  #kpi{position:sticky;bottom:0;height:auto;min-height:40px;flex-wrap:wrap;padding:6px 12px;gap:6px 0;row-gap:4px}
+  .kd{display:none}
+  .ki{gap:4px;padding:2px 8px}
+  .kb{font-size:10px;margin-right:8px}
+  .kc{display:none}
+  #vc{width:calc(100vw - 32px);left:16px;bottom:16px}
+  .ob-grid{grid-template-columns:1fr}
+  #site-footer{padding:24px}
+}
+
+@keyframes pd{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes fl{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes si{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+</style>
+</head>
+<body>
+
+<!-- ── Hero landing section ── -->
+<header id="hero">
+  <svg class="hero-grid-bg" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(0,255,65,0.06)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(#grid)"/></svg>
+  <div class="hero-eyebrow">Autonomous Dispatch · AI Layer · Proof of Concept</div>
+  <h1 class="hero-headline">What airport ops look like<br><em>when AI takes the controls.</em></h1>
+  <p class="hero-sub">The <a href="/" style="color:var(--green);text-decoration:none">live JFK tracker</a> shows real ground ops as they happen. This simulation shows what those same ops look like when AI replaces the dispatcher — autonomously routing 18 vehicle types, managing runway buffers, and resolving conflicts in real time.</p>
+  <a class="hero-cta" href="#simulation">Run the simulation →</a>
+  <div class="hero-stats">
+    <div class="hs-item"><span class="hs-value">18</span><span class="hs-unit">vehicles</span><span class="hs-label">Coordinated</span></div>
+    <div class="hs-item"><span class="hs-value">8</span><span class="hs-unit">gates</span><span class="hs-label">Active</span></div>
+    <div class="hs-item"><span class="hs-value">~22%</span><span class="hs-unit">reduction</span><span class="hs-label">Avg turnaround</span></div>
+    <div class="hs-item"><span class="hs-value">2</span><span class="hs-unit">runways</span><span class="hs-label">Safety monitored</span></div>
+  </div>
+</header>
+
+<main>
+<!-- ── Simulation section ── -->
+<section id="simulation">
+  <div class="sim-header">
+    <span class="sim-header-dot"></span>
+    <span class="sim-header-label">Live simulation</span>
+    <div class="sim-header-divider"></div>
+    <span class="sim-header-label">JFK Terminal 4</span>
+    <div class="sim-header-divider"></div>
+    <span class="sim-header-label">AI dispatch active</span>
+    <div class="sim-header-divider"></div>
+    <span class="sim-header-label" id="sim-header-veh">18 vehicles</span>
+  </div>
+
+<!-- Onboarding overlay -->
+<div id="onboarding">
+  <div class="ob-card">
+    <div class="ob-header">SYSTEM BRIEFING — STATION INIT</div>
+    <div class="ob-title">GROUNDCONTROL AI</div>
+    <div class="ob-sub">JFK Terminal 4 · Ground Operations · Simulation Mode</div>
+    <div class="ob-divider"></div>
+    <div class="ob-grid">
+      <div class="ob-item">
+        <div class="ob-item-icon">✈</div>
+        <div class="ob-item-title">Surface Radar</div>
+        <div class="ob-item-desc">Live ASDE-X style display of all aircraft and ground vehicles across 8 active gates and 2 runways.</div>
+      </div>
+      <div class="ob-item">
+        <div class="ob-item-icon">⬡</div>
+        <div class="ob-item-title">AI Dispatch</div>
+        <div class="ob-item-desc">Autonomous assignment of fuel, baggage, catering, and pushback units to arriving aircraft every 8 seconds.</div>
+      </div>
+      <div class="ob-item">
+        <div class="ob-item-icon">⚠</div>
+        <div class="ob-item-title">Runway Safety</div>
+        <div class="ob-item-desc">Real-time incursion prevention — vehicles auto-hold when aircraft are on approach. Alerts at 90s and 30s.</div>
+      </div>
+      <div class="ob-item">
+        <div class="ob-item-icon">◉</div>
+        <div class="ob-item-title">Fleet Tracking</div>
+        <div class="ob-item-desc">Click any vehicle on the radar to pull its data block — driver, task, speed, heading, transponder status.</div>
+      </div>
+    </div>
+    <div class="ob-controls">
+      <div class="ob-ctrl"><span class="ob-key">CLICK</span> vehicle to select</div>
+      <div class="ob-ctrl"><span class="ob-key">ESC</span> deselect / close</div>
+      <div class="ob-ctrl"><span class="ob-key">ENTER</span> begin operations</div>
+    </div>
+    <button class="ob-btn" id="ob-dismiss">BEGIN OPERATIONS</button>
+  </div>
+</div>
+<div id="map-wrap">
+  <canvas id="cv"></canvas>
+  <div id="emb"></div>
+  <div id="vc">
+    <div class="vh"><span class="vn" id="vcn"><span class="vn-dot" id="vcdot"></span><span id="vcnm"></span></span><div style="display:flex;align-items:center;gap:8px"><span class="vs" id="vcs"></span><button class="vx" id="vcx">&times;</button></div></div>
+    <div class="vdv"></div><div id="vcd"></div><div class="vdv"></div>
+    <div class="vht">TASK HISTORY</div><div id="vch"></div>
+  </div>
+</div>
+<div id="right-panel">
+  <div class="ps" id="dsp">
+    <div class="ph"><div class="pt"><div class="ld"></div>DISPATCH LOG<span class="pt-right"><span id="dsp-live-tag" style="color:var(--green);margin-right:6px">[LIVE]</span><span id="dsp-time">--:--:--Z</span></span></div><div class="pst" id="dss">TERMINAL 4 · KJFK · AI DISPATCH ACTIVE</div></div>
+    <div id="inbound-section"><div class="iq-title">INBOUND QUEUE</div><div id="iq-list"></div></div>
+    <div class="pb" id="dl"></div>
+    <div id="nxt">NEXT DISPATCH IN <span id="dcd">8</span>s</div>
+  </div>
+  <div class="ps" id="flp">
+    <div class="ph"><div class="pt">FLEET STATUS<span class="pt-right">ASDE-X · SFC RADAR</span></div><div class="pst" id="fls">18 VEH · 0 ACTIVE · KJFK T4</div></div>
+    <div class="pb" id="fll"></div>
+  </div>
+</div>
+<div id="kpi">
+  <div class="kb"><div class="ld"></div>GROUNDCONTROL AI</div>
+  <div class="kd"></div><div class="ki"><span class="kl">Active</span><div class="ki-row"><span class="kv" id="ka">0</span><span class="ku">veh</span></div></div>
+  <div class="kd"></div><div class="ki"><span class="kl">At Gates</span><div class="ki-row"><span class="kv" id="kg">0</span><span class="ku">gates</span></div></div>
+  <div class="kd"></div><div class="ki"><span class="kl">Inbound</span><div class="ki-row"><span class="kv" id="kin">0</span><span class="ku">flt</span></div></div>
+  <div class="kd"></div><div class="ki"><span class="kl">Violations</span><div class="ki-row"><span class="kv" id="kvl">0</span><span class="ku">inc</span></div></div>
+  <div class="kd"></div><div class="ki"><span class="kl">Avg Turnaround</span><div class="ki-row"><span class="kv" id="kta">--:--</span><span class="ku">m:ss</span></div></div>
+  <div class="kc" id="kcl">--:--:-- EST</div>
+  <button id="pause-btn" title="Space to pause/resume">⏸ PAUSE</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CANVAS SETUP — fill entire map-wrap, no dead space
+// ═══════════════════════════════════════════════════
+const cv=document.getElementById('cv'), C=cv.getContext('2d'), wrap=document.getElementById('map-wrap');
+let CW,CH,SX,SY,OX=0,OY=0;
+const WW=1200,WH=800;
+function resize(){
+  const r=devicePixelRatio||1;CW=wrap.clientWidth;CH=wrap.clientHeight;
+  cv.width=CW*r;cv.height=CH*r;cv.style.width=CW+'px';cv.style.height=CH+'px';
+  C.setTransform(r,0,0,r,0,0);
+  const sc=Math.min(CW/WW,CH/WH);
+  SX=sc;SY=sc;OX=(CW-WW*sc)/2;OY=(CH-WH*sc)/2;
+}
+window.addEventListener('resize',resize);resize();
+function X(x){return x*SX+OX}
+function Y(y){return y*SY+OY}
+function S(v){return v*SX}
+
+// ═══════════════════════════════════════════════════
+// AIRPORT LAYOUT (1200×800 logical, stretched to fill)
+// Runways thin at top (~10%), terminal centered lower half, hub SE
+// ═══════════════════════════════════════════════════
+const RWY1={x:40,y:18,w:1120,h:16,label:'13L/31R',cx:600};
+const RWY2={x:40,y:52,w:1120,h:16,cx:600};
+const RWY2_LABEL='13R/31L';
+const TWY_HOTEL={x:40,y:95,w:1120,h:12};
+const APRON={x:150,y:140,w:800,h:280};
+const TERM={x:120,y:470,w:880,h:70};
+const N_SVC={x:120,y:440,w:880,h:8};
+const S_SVC={x:120,y:560,w:880,h:8};
+const HUB_BOX={x:920,y:590,w:200,h:140};
+
+// Gates — A pier (west) and B pier (east) — ALL active
+const GATES={
+  A1:{pos:[230,230],active:true},A2:{pos:[340,230],active:true},A3:{pos:[450,230],active:true},
+  B1:{pos:[600,230],active:true},B2:{pos:[710,230],active:true},B3:{pos:[820,230],active:true},
+  B4:{pos:[880,230],active:true},B5:{pos:[940,230],active:true},
+};
+const ACTIVE_GATES=Object.keys(GATES).filter(k=>GATES[k].active);
+
+const JETWAY_TOP=470; // terminal roof line
+const JETWAY_BOT=270; // end of jetway arm near gate
+
+// Hub parking: 5 cols × 4 rows fixed grid
+const HUB_SLOTS=[];
+for(let r=0;r<4;r++)for(let c=0;c<5;c++)HUB_SLOTS.push([HUB_BOX.x+22+c*36,HUB_BOX.y+18+r*30]);
+const HUB_CENTER=[HUB_BOX.x+HUB_BOX.w/2,HUB_BOX.y+HUB_BOX.h/2];
+const SVC_Y=445; // north service road centerline
+
+// Geofence zones
+const ZONES=[
+  {label:'APRON ALPHA',x:APRON.x,y:APRON.y,w:APRON.w,h:APRON.h,fill:'rgba(59,130,246,0.05)',stroke:'rgba(59,130,246,0.25)',dash:null,lc:'#3B82F6'},
+  {label:'RUNWAY BUFFER',x:40,y:78,w:1120,h:8,fill:'rgba(239,68,68,0.06)',stroke:'rgba(239,68,68,0.2)',dash:[8,5],lc:'#EF4444'},
+  {label:'CATERING',x:30,y:250,w:100,h:160,fill:'rgba(139,92,246,0.05)',stroke:'rgba(139,92,246,0.2)',dash:null,lc:'#8B5CF6'},
+  {label:'FUEL DEPOT',x:1040,y:250,w:120,h:140,fill:'rgba(239,68,68,0.05)',stroke:'rgba(239,68,68,0.2)',dash:null,lc:'#EF4444'},
+  {label:'VEHICLE HUB',x:HUB_BOX.x-8,y:HUB_BOX.y-8,w:HUB_BOX.w+16,h:HUB_BOX.h+16,fill:'rgba(16,185,129,0.04)',stroke:'rgba(16,185,129,0.2)',dash:[6,4],lc:'#10B981'},
+];
+
+// ═══════════════════════════════════════════════════
+// VEHICLE + SIM CONFIG
+// ═══════════════════════════════════════════════════
+const TICK=100, DISP_INT=8, EM_FIRST=30, EM_REPEAT=300, EM_DUR=25;
+const MOVE_SPD=2.6, SLOW_SPD=0.8, ARFF_SPD=5.5;
+const AC_FAST=6.0, AC_MED=2.8, AC_SLOW=1.0; // aircraft speeds: runway/taxi/gate approach (~8s arrival)
+
+const VTYPES={
+  BAG:{color:'#F59E0B',name:'Baggage Tug',dur:100},FUEL:{color:'#EF4444',name:'Fuel Truck',dur:120},
+  CAT:{color:'#8B5CF6',name:'Catering Lift',dur:90},TUG:{color:'#3B82F6',name:'Pushback Tractor',dur:30},
+  GPU:{color:'#10B981',name:'Ground Power',dur:60},H2O:{color:'#06B6D4',name:'Water Service',dur:70},
+  ARFF:{color:'#FF3B3B',name:'ARFF/Emergency',dur:0},
+};
+const FLEET=['BAG-01','BAG-02','BAG-03','BAG-04','FUEL-01','FUEL-02','FUEL-03','CAT-01','CAT-02','CAT-03','TUG-01','TUG-02','TUG-03','GPU-01','GPU-02','H2O-01','ARFF-01','ARFF-02'];
+const DRIVERS=['Marcus Webb','Sarah Chen','James Rodriguez','Aisha Patel','Derek Okafor','Lisa Huang','Tom Kowalski','Nina Vasquez','Ray Mitchell','Eva Lindström','Chris Adeyemi','Priya Sharma','Mike Torres','Yuki Tanaka','Jordan Blake','Sam Okonkwo','Alex Petrov','Dana Kim'];
+const AIRLINES=[{code:'AA',color:'#CC0000'},{code:'UA',color:'#003087'},{code:'DL',color:'#003366'},{code:'WN',color:'#FF6600'},{code:'B6',color:'#00B2A9'}];
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let simT=0,dispCD=DISP_INT,selId=null;
+let vehs={},gateS={};
+let inboundQ=[],dispLog=[],turnTimes=[];
+let emActive=false,emTimer=0,nextEm=EM_FIRST;
+let sweepAngle=0,simPaused=false;
+let aiIdx=0,flNum=100;
+
+// ── Runway Safety System state ──
+let rwy1State='CLEAR',rwy2State='CLEAR'; // CLEAR | APPROACH_90 | APPROACH_30
+let rwy1ETA=0,rwy2ETA=0;
+let heldVehicles=new Set();
+let conflictCooldown=0;
+let transponderLost=null; // vehicle id with lost transponder
+let transponderLostTimer=0;
+
+// ═══════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════
+function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1])}
+function lerp2(a,b,t){return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}
+function fmt(s){const m=Math.floor(s/60),ss=Math.floor(s%60);return m+':'+String(ss).padStart(2,'0')}
+function clk(){const b=14*3600+31*60+Math.floor(simT);const h=Math.floor(b/3600)%24,m=Math.floor(b%3600/60),s=b%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+function nxtAl(){const a=AIRLINES[aiIdx%AIRLINES.length];aiIdx++;return a}
+function nxtFl(al){flNum+=Math.floor(Math.random()*80)+20;return al.code+' '+flNum}
+function rndDelay(){return 120+Math.random()*120}
+
+// ── Routing (pixel coords, L-shaped) ──
+// Catering zone pickup point
+const CAT_PICKUP=[80,330];
+
+function routeToGate(gid,vtype){
+  const g=GATES[gid].pos;
+  if(vtype==='CAT'){
+    // Route through catering staging area first
+    return[null,[HUB_CENTER[0],SVC_Y],[CAT_PICKUP[0],SVC_Y],[CAT_PICKUP[0],CAT_PICKUP[1]],[CAT_PICKUP[0],SVC_Y],[g[0],SVC_Y],[g[0],g[1]]];
+  }
+  return[null,[HUB_CENTER[0],SVC_Y],[g[0],SVC_Y],[g[0],g[1]]];
+}
+function routeFromGate(gid){
+  const g=GATES[gid].pos;
+  return[[g[0],g[1]],[g[0],SVC_Y],[HUB_CENTER[0],SVC_Y],null];
+}
+// Taxiway connector x-positions (match gate columns, used for turnoffs)
+const CONNS=[230,340,450,600,710,820,880,940];
+const RWY_CY=RWY1.y+RWY1.h/2;
+const TWY_CY=TWY_HOTEL.y+TWY_HOTEL.h/2;
+const LEADOFF_Y=(RWY2.y+RWY2.h+TWY_HOTEL.y)/2; // midpoint between rwy2 and hotel
+
+function routeARFF(from){return[[...from],[600,TWY_CY],[600,RWY_CY]]}
+
+// Aircraft arrival: enter east on RWY1, decel, turn off at nearest connector, taxi Hotel, south to gate
+function routeAcArr(gid){
+  const g=GATES[gid].pos;
+  const near=CONNS.reduce((a,b)=>Math.abs(b-g[0])<Math.abs(a-g[0])?b:a);
+  return[
+    [near,0],                    // appear top of canvas on runway centerline
+    [near,RWY_CY],               // fast descent along runway
+    [near,LEADOFF_Y],            // lead-off south
+    [near,TWY_CY],               // onto taxiway Hotel
+    [g[0],TWY_CY],               // east/west along Hotel
+    [g[0],APRON.y+10],           // south into apron
+    [g[0],g[1]],                 // dock at gate (very slow)
+  ];
+}
+// Aircraft departure: pushback south, taxi to Hotel, east to connector, north onto runway, accelerate out
+function routeAcDep(gid){
+  const g=GATES[gid].pos;
+  const near=CONNS.reduce((a,b)=>Math.abs(b-g[0])<Math.abs(a-g[0])?b:a);
+  return[
+    [g[0],g[1]],               // at gate
+    [g[0],g[1]+35],            // pushback south (very slow, facing north)
+    [g[0],APRON.y+10],         // clear apron
+    [g[0],TWY_CY],             // onto taxiway
+    [near,TWY_CY],             // along Hotel to connector
+    [near,LEADOFF_Y],          // north onto lead-off
+    [near,RWY_CY],             // onto runway
+    [RWY1.x-40,RWY_CY],       // accelerate west, exit
+  ];
+}
+function acSegSpeed(segIdx,total,departing){
+  if(departing){
+    if(segIdx<=1)return AC_SLOW*0.35; // pushback
+    if(segIdx>=total-2)return AC_FAST; // runway accel
+    return AC_MED;
+  }
+  if(segIdx===0)return AC_FAST; // landing roll
+  if(segIdx>=total-2)return AC_SLOW; // gate approach
+  return AC_MED;
+}
+
+// ═══════════════════════════════════════════════════
+// VEHICLE SYSTEM (identical logic, pixel coords)
+// ═══════════════════════════════════════════════════
+function mkVeh(id,i){
+  const t=id.split('-')[0],td=VTYPES[t];
+  const hp=HUB_SLOTS[i%HUB_SLOTS.length];
+  return{id,type:t,color:td.color,tname:td.name,driver:DRIVERS[i],
+    state:'IDLE',pos:[...hp],hub:[...hp],
+    route:null,ri:0,rp:0,gate:null,task:null,
+    svcT:0,svcDur:td.dur,trT:0,heading:0,speed:0,
+    hist:[],wobble:Math.random()*Math.PI*2};
+}
+function moveRoute(v){
+  if(!v.route||v.ri>=v.route.length-1)return true;
+  const f=v.route[v.ri],t=v.route[v.ri+1],d=dist(f,t);
+  if(d<0.5){v.ri++;return false}
+  const last=v.ri===v.route.length-2;
+  const spd=v.state==='EMERGENCY'?ARFF_SPD:(last&&v.rp>0.6)?SLOW_SPD:MOVE_SPD;
+  v.speed=spd; // raw sim units; displayed as mph via *15 in updCard
+  v.rp+=spd/d;
+  if(v.rp>=1){v.pos=[...t];v.rp=0;v.ri++;return v.ri>=v.route.length-1}
+  v.pos=lerp2(f,t,v.rp);v.heading=Math.atan2(t[1]-f[1],t[0]-f[0]);
+  return false;
+}
+function dispatchV(v,gid,task){
+  v.state='DISPATCHED';v.gate=gid;v.task=task;
+  const r=routeToGate(gid,v.type);r[0]=[...v.pos];
+  v.route=r;v.ri=0;v.rp=0;v.trT=0;
+  addLog(v.id+' → Gate '+gid,'a',task);
+}
+function returnV(v){
+  v.state='RETURNING';
+  const r=v.gate?routeFromGate(v.gate):[[...v.pos],[...v.hub]];
+  if(!r[0])r[0]=[...v.pos];r[r.length-1]=[...v.hub];
+  v.route=r;v.ri=0;v.rp=0;v.trT=0;v.task=null;
+}
+function tickV(v,dt){
+  v.wobble+=dt*2.5;
+  if(v.state==='IDLE'){v.speed=0;return}
+  if(v.state==='DISPATCHED'||v.state==='EMERGENCY'){
+    v.trT+=dt;
+    if(moveRoute(v)){
+      if(v.state==='EMERGENCY'){v.state='IDLE';v.speed=0;return}
+      v.state='SERVICING';v.svcT=0;v.pos=[...GATES[v.gate].pos];v.speed=0;
+      addLog(v.id+' docked at '+v.gate,'c','Servicing');
+    }return;
+  }
+  if(v.state==='SERVICING'){
+    v.svcT+=dt;v.speed=0;
+    if(v.svcT>=v.svcDur){
+      v.hist.unshift({gate:v.gate,t:simT});if(v.hist.length>5)v.hist.pop();
+      addLog(v.id+' '+v.gate+' — '+v.tname,'c','Complete');
+      const gid=v.gate;returnV(v);checkTurn(gid);
+    }return;
+  }
+  if(v.state==='RETURNING'){v.trT+=dt;if(moveRoute(v)){v.state='IDLE';v.pos=[...v.hub];v.gate=null;v.route=null;v.speed=0}return}
+  if(v.state==='VIOLATION'||v.state==='HOLD')v.speed=0;
+}
+
+// ═══════════════════════════════════════════════════
+// GATE & AIRCRAFT (identical logic)
+// ═══════════════════════════════════════════════════
+function mkGate(id){return{id,state:'EMPTY',ac:null,assigned:[],needed:[],turnStart:0,nextArr:0,acPos:null,acRoute:null,acRi:0,acRp:0,acHead:0}}
+function spawnArr(gid){
+  const gs=gateS[gid];
+  // Use inbound queue entry for this gate if one exists (makes panel accurate)
+  const qIdx=inboundQ.findIndex(q=>q.gate===gid);
+  let al,fl;
+  if(qIdx>=0){
+    const q=inboundQ[qIdx];fl=q.flight;
+    al=AIRLINES.find(a=>a.color===q.color)||{code:fl.split(' ')[0],color:q.color};
+    inboundQ.splice(qIdx,1);
+  }else{al=nxtAl();fl=nxtFl(al);}
+  gs.state='ARRIVING';gs.ac={flight:fl,airline:al.code,color:al.color};
+  gs.acRoute=routeAcArr(gid);gs.acRi=0;gs.acRp=0;gs.acHead=0;
+  gs.acPos=[...gs.acRoute[0]];
+  gs.assigned=[];gs.needed=['GPU','FUEL','BAG','CAT'];
+  if(Math.random()>.5)gs.needed.push('H2O');
+  addLog(fl+' inbound → Gate '+gid,'a','Arriving');
+}
+function moveAcRoute(gs,spd){
+  if(!gs.acRoute||gs.acRi>=gs.acRoute.length-1)return true;
+  const f=gs.acRoute[gs.acRi],t=gs.acRoute[gs.acRi+1],d=dist(f,t);
+  if(d<0.5){gs.acRi++;return false}
+  gs.acRp+=spd/d;
+  // Heading: atan2(dx, -dy) so 0=north, CW positive
+  gs.acHead=Math.atan2(t[0]-f[0],-(t[1]-f[1]));
+  if(gs.acRp>=1){gs.acPos=[...t];gs.acRp=0;gs.acRi++;return gs.acRi>=gs.acRoute.length-1}
+  gs.acPos=lerp2(f,t,gs.acRp);return false;
+}
+function tickGate(gs,dt){
+  if(gs.state==='ARRIVING'){
+    const total=gs.acRoute?gs.acRoute.length:2;
+    const spd=acSegSpeed(gs.acRi,total,false);
+    if(moveAcRoute(gs,spd)){
+      gs.state='AT_GATE';gs.turnStart=simT;gs.acPos=[...GATES[gs.id].pos];gs.acHead=0;
+      addLog(gs.ac.flight+' at Gate '+gs.id,'c','At Gate');reqSvc(gs.id);
+    }return;
+  }
+  if(gs.state==='DEPARTING'){
+    const total=gs.acRoute?gs.acRoute.length:2;
+    const spd=acSegSpeed(gs.acRi,total,true);
+    if(moveAcRoute(gs,spd)){
+      gs.state='EMPTY';gs.ac=null;gs.acPos=null;gs.acHead=0;
+      gs.nextArr=simT+rndDelay();addLog('Gate '+gs.id+' clear — cycling','w','Cycling');return;
+    }return;
+  }
+  if(gs.state==='EMPTY'&&gs.nextArr&&simT>=gs.nextArr){spawnArr(gs.id);gs.nextArr=0}
+}
+function checkTurn(gid){
+  const gs=gateS[gid];if(gs.state!=='AT_GATE')return;
+  const still=Object.values(vehs).filter(v=>v.gate===gid&&(v.state==='DISPATCHED'||v.state==='SERVICING'));
+  if(still.length>0||gs.needed.length>0)return;
+  const hadTug=gs.assigned.some(id=>id.startsWith('TUG'));
+  if(!hadTug){const tug=findIdle('TUG');if(tug){dispatchV(tug,gid,'Pushback');gs.assigned.push(tug.id)}return}
+  const tugBusy=Object.values(vehs).find(v=>v.gate===gid&&v.type==='TUG'&&(v.state==='DISPATCHED'||v.state==='SERVICING'));
+  if(tugBusy)return;
+  gs.state='DEPARTING';gs.acRoute=routeAcDep(gid);gs.acRi=0;gs.acRp=0;
+  const el=simT-gs.turnStart;turnTimes.push(el);if(turnTimes.length>5)turnTimes.shift();
+  addLog(gs.ac.flight+' pushback — '+fmt(el),'c','Departing');
+}
+function reqSvc(gid){
+  const gs=gateS[gid],need=[...gs.needed];
+  need.forEach(type=>{const v=findIdle(type,gid);if(v){dispatchV(v,gid,v.tname+' · '+gs.ac.flight);gs.assigned.push(v.id);gs.needed=gs.needed.filter(t=>t!==type)}});
+}
+function findIdle(type,gid){
+  const idle=Object.values(vehs).filter(v=>v.type===type&&v.state==='IDLE');
+  if(!idle.length)return null;
+  if(!gid||idle.length===1)return idle[0];
+  const gp=GATES[gid].pos;
+  idle.sort((a,b)=>dist(a.pos,gp)-dist(b.pos,gp));
+  const best=idle[0],alt=idle[1];
+  const dBest=dist(best.pos,gp),dAlt=dist(alt.pos,gp);
+  const saves=Math.round((dAlt-dBest)/MOVE_SPD);
+  if(saves>8)addLog('AI: '+best.id+' over '+alt.id+' (saves ~'+saves+'s)','w','AI OPT');
+  return best;
+}
+
+// ═══════════════════════════════════════════════════
+// INBOUND, DISPATCH, EMERGENCY (identical)
+// ═══════════════════════════════════════════════════
+function tickInbound(){
+  inboundQ=inboundQ.filter(q=>q.eta>-5);
+  while(inboundQ.length<2){const al=nxtAl(),fl=nxtFl(al);const eta=120+Math.random()*180;inboundQ.push({flight:fl,color:al.color,eta,maxEta:eta,gate:null})}
+  inboundQ.forEach(q=>{q.eta-=TICK/1000});
+  inboundQ.forEach(q=>{if(!q.gate){const empty=ACTIVE_GATES.find(gid=>{const gs=gateS[gid];return gs.state==='EMPTY'&&!inboundQ.some(iq=>iq.gate===gid&&iq!==q)});if(empty){q.gate=empty;const gs=gateS[empty];if(!gs.nextArr||gs.nextArr-simT>q.eta+5)gs.nextArr=simT+Math.max(8,q.eta)}}});
+}
+function runDispatch(){ACTIVE_GATES.forEach(gid=>{const gs=gateS[gid];if(gs.state==='AT_GATE'&&gs.needed.length>0)reqSvc(gid);if(gs.state==='EMPTY'&&!gs.nextArr)gs.nextArr=simT+rndDelay()})}
+function triggerEm(){
+  if(emActive)return;emActive=true;emTimer=0;
+  const f2=vehs['FUEL-02'];
+  if(f2){f2.state='VIOLATION';f2.pos=[600,85];f2.gate=null;f2.task=null;f2.route=null;addLog('FUEL-02 entered runway buffer','v','VIOLATION')}
+  ['ARFF-01','ARFF-02'].forEach(id=>{const v=vehs[id];if(!v)return;v.state='EMERGENCY';v.route=routeARFF(v.pos);v.ri=0;v.rp=0;addLog(v.id+' → RWY 13L threshold','e','EMERGENCY')});
+  addLog('EMERGENCY OVERRIDE — all traffic hold','e','ALERT');addLog('Rerouting ground traffic — runway buffer compromised','e','OVERRIDE');
+  const violId=f2?f2.id:'UNKNOWN';
+  const b=document.getElementById('emb');b.textContent='⚠  EMERGENCY — '+violId+' RUNWAY INCURSION — ARFF UNITS RESPONDING';b.style.display='flex';
+  document.getElementById('map-wrap').classList.add('emergency');
+}
+function resolveEm(){
+  emActive=false;const f2=vehs['FUEL-02'];
+  if(f2){f2.state='RETURNING';f2.route=[[...f2.pos],[...f2.hub]];f2.ri=0;f2.rp=0;addLog('FUEL-02 rerouted — violation cleared','c','Cleared')}
+  ['ARFF-01','ARFF-02'].forEach(id=>{const v=vehs[id];if(!v||v.state==='IDLE')return;v.state='RETURNING';v.route=[[...v.pos],[...v.hub]];v.ri=0;v.rp=0});
+  addLog('Emergency resolved — normal operations resumed','c','ALL CLEAR');
+  document.getElementById('emb').style.display='none';document.getElementById('map-wrap').classList.remove('emergency');nextEm=simT+EM_REPEAT;
+  // Restore transponder after emergency
+  if(transponderLost){transponderLost=null;transponderLostTimer=0}
+}
+
+// ═══════════════════════════════════════════════════
+// RUNWAY SAFETY SYSTEM (LaGuardia NTSB features)
+// ═══════════════════════════════════════════════════
+function tickRunwaySafety(dt){
+  // Feature 1: Active runway lock with approach zones
+  // Check if any aircraft is arriving (on runway segments = acRi < 2)
+  let r1Active=false,r1Eta=0;
+  Object.values(gateS).forEach(gs=>{
+    if(gs.state==='ARRIVING'&&gs.acRoute&&gs.acRi<=1){
+      r1Active=true;
+      // Estimate ETA: remaining distance at current speed
+      let rem=0;
+      for(let i=gs.acRi;i<gs.acRoute.length-1;i++)rem+=dist(gs.acRoute[i],gs.acRoute[i+1]);
+      r1Eta=Math.max(0,rem/AC_FAST*0.1); // rough seconds estimate
+    }
+    if(gs.state==='DEPARTING'&&gs.acRoute&&gs.acRi>=gs.acRoute.length-3){
+      r1Active=true;r1Eta=5; // departing on runway
+    }
+  });
+
+  if(r1Active){
+    rwy1State=r1Eta>9?'APPROACH_90':'APPROACH_30';
+    rwy1ETA=r1Eta;
+  }else{
+    rwy1State='CLEAR';rwy1ETA=0;
+    // Release held vehicles
+    heldVehicles.forEach(vid=>{
+      const v=vehs[vid];
+      if(v&&v.state==='HOLD'){v.state='DISPATCHED';addLog(v.id+' released — runway clear','c','RELEASED')}
+    });
+    heldVehicles.clear();
+  }
+
+  // RWY2 mirrors RWY1 state with slight offset for visual variety
+  rwy2State=rwy1State==='CLEAR'?'CLEAR':(rwy1ETA>12?'APPROACH_90':'APPROACH_30');
+  rwy2ETA=Math.max(0,rwy1ETA+3);
+
+  // Hold vehicles whose position is in the runway zone (y < LEADOFF_Y)
+  if(rwy1State!=='CLEAR'){
+    Object.values(vehs).forEach(v=>{
+      if(v.state==='DISPATCHED'&&v.pos[1]<LEADOFF_Y&&!heldVehicles.has(v.id)){
+        v.state='HOLD';heldVehicles.add(v.id);
+        addLog('\u26D4 HOLD — RWY ACTIVE — '+v.id,'e','HOLD');
+      }
+    });
+  }
+
+  // Feature 2: Conflict detection — fire once per dispatch cycle
+  conflictCooldown-=dt;
+  if(conflictCooldown<=0&&rwy1State!=='CLEAR'){
+    // Check if any dispatched vehicle route crosses runway zone
+    Object.values(vehs).forEach(v=>{
+      if(v.state!=='DISPATCHED'||!v.route||heldVehicles.has(v.id))return;
+      const crossesRwy=v.route.some(wp=>wp&&wp[1]<RWY2.y+RWY2.h+10);
+      if(crossesRwy){
+        addLog('\u26A0 CONFLICT DETECTED — holding '+v.id,'e','CONFLICT');
+        v.state='HOLD';heldVehicles.add(v.id);
+        conflictCooldown=DISP_INT;
+      }
+    });
+    if(conflictCooldown<=0)conflictCooldown=DISP_INT;
+  }
+
+  // Feature 3: Transponder simulation
+  // During emergency, FUEL-02 loses transponder for 8 seconds
+  if(emActive&&emTimer>=2&&emTimer<10){
+    if(transponderLost!=='FUEL-02'){
+      transponderLost='FUEL-02';transponderLostTimer=0;
+      addLog('\u26A0 TRANSPONDER LOSS — FUEL-02 — signal lost','e','XPDR LOSS');
+    }
+    transponderLostTimer+=dt;
+  }else if(emActive&&emTimer>=10&&transponderLost==='FUEL-02'){
+    addLog('FUEL-02 transponder restored — '+Math.round(transponderLostTimer)+'s outage','c','XPDR OK');
+    transponderLost=null;transponderLostTimer=0;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// UI — DISPATCH LOG, INBOUND, FLEET, CARD, KPI (unchanged)
+// ═══════════════════════════════════════════════════
+function addLog(txt,type,tag){dispLog.unshift({txt,type,tag,time:clk()});if(dispLog.length>50)dispLog.pop();renderLog()}
+function renderLog(){
+  document.getElementById('dl').innerHTML=dispLog.slice(0,26).map((e,i)=>{
+    const ic=e.type==='c'?'✓':e.type==='v'||e.type==='e'?'⚠':e.type==='w'?'●':'▶';
+    const tc={'a':'var(--blue)','c':'var(--green)','v':'var(--red)','e':'var(--red)','w':'var(--amber)'}[e.type]||'var(--t3)';
+    const emClass=(e.type==='v'||e.type==='e')?' em-row':e.tag==='AI OPT'?' ai-opt':'';
+    return`<div class="de${emClass}"${i===0?' style="animation:si .2s ease-out"':''}><span class="dt">${e.time}</span><span class="di" style="color:${tc}">${ic}</span><span class="dx">${e.txt}</span><span class="dg ${e.type}">${e.tag}</span></div>`;
+  }).join('');
+}
+function renderInbound(){
+  document.getElementById('iq-list').innerHTML=inboundQ.slice(0,3).map(q=>{
+    const pct=Math.max(0,Math.min(100,(q.eta/q.maxEta)*100));
+    return`<div class="iq-row"><span class="iq-icon">✈</span><span class="iq-flight" style="color:${q.color}">${q.flight}</span><span class="iq-gate">${q.gate?'Gate '+q.gate:'Unassigned'}</span><div class="iq-bar"><div class="iq-bar-fill" style="width:${pct}%;background:${q.color}"></div></div><span class="iq-eta">ETA ${fmt(Math.max(0,q.eta))}</span></div>`;
+  }).join('');
+}
+function renderFleet(){
+  const ac=Object.values(vehs).filter(v=>v.state!=='IDLE').length;
+  document.getElementById('fls').textContent=FLEET.length+' vehicles · '+ac+' active';
+  const el=document.getElementById('fll');
+  el.innerHTML=FLEET.map(id=>{
+    const v=vehs[id];if(!v)return'';
+    const bc={'IDLE':'i','DISPATCHED':'d','SERVICING':'s','RETURNING':'r','VIOLATION':'vl','EMERGENCY':'em','HOLD':'vl'}[v.state]||'i';
+    const sl=v.state==='DISPATCHED'?'EN ROUTE':v.state==='HOLD'?'⛔ HOLD':v.state;
+    const ds=v.gate?'Gate '+v.gate:v.state==='RETURNING'?'Hub':v.state==='EMERGENCY'?'RWY 13L':'—';
+    let tm='';if(v.state==='SERVICING')tm=fmt(Math.max(0,v.svcDur-v.svcT));else if(v.state==='DISPATCHED'||v.state==='RETURNING')tm=fmt(v.trT);
+    const pct=v.state==='SERVICING'?Math.max(0,Math.min(100,(1-v.svcT/v.svcDur)*100)):0;
+    const svcBar=v.state==='SERVICING'?`<div class="svc-bar"><div class="svc-bar-fill" style="width:${pct}%;background:${v.color}"></div></div>`:'';
+    return`<div class="fr${selId===id?' sel':''}" data-v="${id}"><div class="fl-border" style="background:${v.color}"></div><div class="fi">${id}</div><div class="fb ${bc}">${sl}</div><div class="fds">${ds}</div><div class="ft">${tm}</div>${svcBar}</div>`;
+  }).join('');
+  el.querySelectorAll('.fr').forEach(r=>r.addEventListener('click',()=>selectV(r.dataset.v)));
+}
+function selectV(id){selId=id;const v=vehs[id];if(!v)return;document.getElementById('vcnm').textContent=v.id;document.getElementById('vcdot').style.background=v.color;updCard();document.getElementById('vc').style.display='block'}
+function deselect(){selId=null;document.getElementById('vc').style.display='none'}
+function updCard(){
+  if(!selId)return;const v=vehs[selId];if(!v)return;
+  const se=document.getElementById('vcs'),sl=v.state==='DISPATCHED'?'EN ROUTE':v.state;
+  const stC={'VIOLATION':'var(--red)','EMERGENCY':'var(--red)','DISPATCHED':'var(--blue)','SERVICING':'var(--amber)','RETURNING':'var(--green)','IDLE':'var(--t3)'};
+  se.textContent=sl;se.style.background=(stC[v.state]||'var(--t3)').replace(')',',0.15)');se.style.color=stC[v.state]||'var(--t3)';
+  const ds=v.gate?v.tname+' · Gate '+v.gate:v.state==='EMERGENCY'?'Emergency dispatch':'—';
+  const sp=v.speed>0?Math.round(v.speed*15)+' mph':'Stationary';
+  const hd=Math.round(((v.heading||0)*180/Math.PI+360)%360)+'°';
+  let eta='—';if(v.state==='SERVICING')eta=fmt(Math.max(0,v.svcDur-v.svcT));
+  document.getElementById('vcd').innerHTML=
+    `<div class="vr"><span class="vk">Driver</span><span class="vv">${v.driver}</span></div>`+
+    `<div class="vr"><span class="vk">Task</span><span class="vv">${ds}</span></div>`+
+    `<div class="vr"><span class="vk">Speed</span><span class="vv">${sp} · Heading ${hd}</span></div>`+
+    `<div class="vr"><span class="vk">${v.state==='SERVICING'?'Remaining':'ETA'}</span><span class="vv">${eta}</span></div>`+
+    `<div class="vr"><span class="vk">Transponder</span><span class="vv" style="color:${transponderLost===v.id?'var(--red)':'var(--green)'}">${transponderLost===v.id?'⚠ LOST — '+Math.round(transponderLostTimer)+'s':'● ACTIVE — last ping '+(0.1+(simT*1.3%0.7)).toFixed(1)+'s ago'}</span></div>`;
+  document.getElementById('vch').innerHTML=v.hist.length?v.hist.map(h=>`<div class="vhi">✓ Gate ${h.gate}  completed ${fmt(simT-h.t)} ago</div>`).join(''):'<div class="vhi" style="color:var(--t3)">No completed tasks yet</div>';
+}
+document.getElementById('vcx').addEventListener('click',deselect);
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')deselect();
+  if(e.key===' '&&e.target===document.body){e.preventDefault();togglePause();}
+});
+function togglePause(){
+  simPaused=!simPaused;
+  const btn=document.getElementById('pause-btn');
+  btn.textContent=simPaused?'▶ RESUME':'⏸ PAUSE';
+  btn.className=simPaused?'paused':'';
+}
+document.getElementById('pause-btn').addEventListener('click',togglePause);
+function updKPI(){
+  const ac=Object.values(vehs).filter(v=>v.state!=='IDLE').length;
+  const ag=Object.values(gateS).filter(g=>g.state==='AT_GATE').length;
+  const ib=Object.values(gateS).filter(g=>g.state==='ARRIVING').length+inboundQ.length;
+  const vl=Object.values(vehs).filter(v=>v.state==='VIOLATION').length;
+  document.getElementById('ka').textContent=ac;document.getElementById('kg').textContent=ag;
+  document.getElementById('kin').textContent=ib;
+  const ve=document.getElementById('kvl');ve.textContent=vl;ve.className='kv'+(vl>0?' al':'');
+  if(turnTimes.length>0)document.getElementById('kta').textContent=fmt(turnTimes.reduce((a,b)=>a+b,0)/turnTimes.length);
+  document.getElementById('kcl').textContent=clk()+' EST';
+  const now=new Date();const uh=String(now.getUTCHours()).padStart(2,'0'),um=String(now.getUTCMinutes()).padStart(2,'0'),us=String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('dsp-time').textContent=uh+':'+um+':'+us+'Z';
+  const ac2=Object.values(vehs).filter(v=>v.state!=='IDLE').length;
+  document.getElementById('fls').textContent=FLEET.length+' VEH · '+ac2+' ACTIVE · KJFK T4';
+  document.getElementById('dcd').textContent=Math.max(0,Math.ceil(dispCD));
+  document.getElementById('dss').textContent=dispLog.length+' events logged';
+}
+
+// ═══════════════════════════════════════════════════
+// CANVAS CLICK → SELECT VEHICLE
+// ═══════════════════════════════════════════════════
+function hitTest(mx,my,radius){
+  let closest=null,minD=radius;
+  Object.values(vehs).forEach(v=>{const d=Math.hypot(mx-X(v.pos[0]),my-Y(v.pos[1]));if(d<minD){minD=d;closest=v.id}});
+  return closest;
+}
+cv.addEventListener('click',e=>{
+  const rect=cv.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const hit=hitTest(mx,my,18);
+  if(hit)selectV(hit);else deselect();
+});
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const touch=e.touches[0],rect=cv.getBoundingClientRect();
+  const mx=touch.clientX-rect.left,my=touch.clientY-rect.top;
+  const hit=hitTest(mx,my,30);
+  if(hit)selectV(hit);else deselect();
+},{passive:false});
+
+// ═══════════════════════════════════════════════════
+// CANVAS RENDER — AIRPORT DIAGRAM
+// ═══════════════════════════════════════════════════
+function render(){
+  C.clearRect(0,0,CW,CH);
+  C.fillStyle='#020403';C.fillRect(0,0,CW,CH);
+
+  // Radar scope background grid
+  C.strokeStyle='rgba(0,255,65,0.025)';C.lineWidth=1;
+  const gsp=S(40);
+  for(let gx=0;gx<CW;gx+=gsp){C.beginPath();C.moveTo(gx,0);C.lineTo(gx,CH);C.stroke()}
+  for(let gy=0;gy<CH;gy+=gsp){C.beginPath();C.moveTo(0,gy);C.lineTo(CW,gy);C.stroke()}
+
+  // ── Range rings (concentric) ──
+  const rcx=CW/2,rcy=CH/2;
+  C.setLineDash([S(2),S(6)]);
+  [0.22,0.38,0.54,0.70].forEach((frac,i)=>{
+    const r=Math.min(CW,CH)*frac;
+    C.strokeStyle='rgba(0,255,65,0.07)';C.lineWidth=S(0.6);
+    C.beginPath();C.arc(rcx,rcy,r,0,Math.PI*2);C.stroke();
+    C.font=S(5)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.18)';C.textAlign='left';
+    C.fillText(((i+1)*2)+'nm',rcx+r*0.707+S(2),rcy-r*0.707+S(4));
+  });
+  C.setLineDash([]);
+
+  // ── Radar sweep ──
+  sweepAngle=(sweepAngle+0.006)%(Math.PI*2);
+  const sweepR=Math.max(CW,CH)*0.85;
+  C.save();
+  for(let i=18;i>=0;i--){
+    const a=sweepAngle-i*(Math.PI/90);
+    C.globalAlpha=Math.max(0,(0.09-i*0.005));
+    C.fillStyle='rgba(0,255,65,1)';
+    C.beginPath();C.moveTo(rcx,rcy);
+    C.arc(rcx,rcy,sweepR,a,a+Math.PI/90);
+    C.closePath();C.fill();
+  }
+  C.globalAlpha=0.55;C.strokeStyle='rgba(0,255,65,0.9)';C.lineWidth=S(0.8);
+  C.beginPath();C.moveTo(rcx,rcy);
+  C.lineTo(rcx+Math.cos(sweepAngle)*sweepR,rcy+Math.sin(sweepAngle)*sweepR);C.stroke();
+  C.restore();
+
+  // ICAO + scope ID
+  C.font='bold '+S(6)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.22)';
+  C.textAlign='right';C.fillText('KJFK · ASDE-X SIM',CW-S(6),S(12));
+
+  // Apron surface
+  const ax=X(APRON.x),ay=Y(APRON.y),aw=X(APRON.x+APRON.w)-ax,ah=Y(APRON.y+APRON.h)-ay;
+  C.fillStyle='rgba(0,255,65,0.03)';C.fillRect(ax,ay,aw,ah);
+  C.strokeStyle='rgba(0,255,65,0.12)';C.lineWidth=1;C.strokeRect(ax,ay,aw,ah);
+
+  // Zones — phosphor outlines
+  ZONES.forEach(z=>{
+    const zx=X(z.x),zy=Y(z.y),zw=X(z.x+z.w)-zx,zh=Y(z.y+z.h)-zy;
+    C.fillStyle=z.fill;C.fillRect(zx,zy,zw,zh);
+    C.strokeStyle='rgba(0,255,65,0.18)';C.lineWidth=S(0.8);
+    if(z.dash)C.setLineDash(z.dash.map(d=>S(d)));else C.setLineDash([S(5),S(4)]);
+    C.strokeRect(zx,zy,zw,zh);C.setLineDash([]);
+    C.font=S(6.5)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.4)';C.globalAlpha=1;C.textAlign='left';
+    C.fillText(z.label,zx+S(5),zy+S(11));
+  });
+
+  // ── Surface: Runways ──
+  [RWY1,RWY2].forEach((r,ri)=>{
+    const rx=X(r.x),ry=Y(r.y),rw=X(r.x+r.w)-rx,rh=Y(r.y+r.h)-ry;
+    C.fillStyle='rgba(0,40,10,0.6)';C.fillRect(rx,ry,rw,rh);
+    C.strokeStyle='rgba(0,255,65,0.35)';C.lineWidth=S(0.8);C.strokeRect(rx,ry,rw,rh);
+    // Amber centerline (real ground radar uses amber on runways)
+    C.strokeStyle='rgba(255,176,0,0.6)';C.lineWidth=Math.max(1,S(0.8));C.setLineDash(ri===0?[S(10),S(8)]:[S(5),S(5)]);
+    C.beginPath();C.moveTo(rx+S(15),ry+rh/2);C.lineTo(rx+rw-S(15),ry+rh/2);C.stroke();C.setLineDash([]);
+    // Threshold bars
+    C.fillStyle='rgba(255,176,0,0.4)';
+    for(let i=0;i<4;i++){C.fillRect(rx+S(5),ry+S(1.5+i*3.5),S(3),S(2));C.fillRect(rx+rw-S(8),ry+S(1.5+i*3.5),S(3),S(2))}
+    const lbl=ri===0?RWY1.label:RWY2_LABEL;
+    C.font='bold '+S(6.5)+'px "JetBrains Mono"';C.fillStyle='rgba(255,176,0,0.45)';C.textAlign='center';
+    C.fillText(lbl,rx+rw/2,ry+rh/2+S(3));
+  });
+
+  // ── Runway lock overlay (amber at 90s, red at 30s) ──
+  if(rwy1State!=='CLEAR'){
+    const lockColor=rwy1State==='APPROACH_30'?'rgba(255,68,68,':'rgba(255,176,0,';
+    const pulse=0.08+Math.sin(simT*3)*0.04;
+    [RWY1,RWY2].forEach(r=>{
+      C.fillStyle=lockColor+pulse+')';
+      C.fillRect(X(r.x),Y(r.y),X(r.x+r.w)-X(r.x),Y(r.y+r.h)-Y(r.y));
+    });
+  }
+
+  // ── Surface: Taxiway Hotel ──
+  const tx=X(TWY_HOTEL.x),ty=Y(TWY_HOTEL.y),tw=X(TWY_HOTEL.x+TWY_HOTEL.w)-tx,th=Y(TWY_HOTEL.y+TWY_HOTEL.h)-ty;
+  C.fillStyle='rgba(0,30,8,0.5)';C.fillRect(tx,ty,tw,th);
+  C.strokeStyle='rgba(0,255,65,0.2)';C.lineWidth=1;C.strokeRect(tx,ty,tw,th);
+  // Amber centerline
+  C.strokeStyle='rgba(255,176,0,0.5)';C.lineWidth=Math.max(1,S(0.7));C.setLineDash([S(4),S(4)]);
+  C.beginPath();C.moveTo(tx,ty+th/2);C.lineTo(tx+tw,ty+th/2);C.stroke();C.setLineDash([]);
+  C.font=S(5.5)+'px "JetBrains Mono"';C.fillStyle='rgba(255,176,0,0.35)';C.textAlign='left';
+  C.fillText('TWY H',tx+S(5),ty+th/2+S(2.5));
+
+  // ── Connectors (runway → hotel) with holding short lines ──
+  CONNS.forEach(cx=>{
+    const cxL=X(cx-4),cxR=X(cx+4),cyTop=Y(RWY2.y+RWY2.h),cyBot=Y(TWY_HOTEL.y);
+    C.fillStyle='rgba(0,30,8,0.5)';C.fillRect(cxL,cyTop,cxR-cxL,cyBot-cyTop);
+    const hsY=Y(RWY2.y+RWY2.h+2);
+    C.strokeStyle='rgba(255,176,0,0.5)';C.lineWidth=Math.max(1,S(0.6));C.setLineDash([]);
+    C.beginPath();C.moveTo(cxL-S(1),hsY);C.lineTo(cxR+S(1),hsY);C.stroke();
+    C.beginPath();C.moveTo(cxL-S(1),hsY+S(2));C.lineTo(cxR+S(1),hsY+S(2));C.stroke();
+  });
+
+  // ── Apron connectors ──
+  CONNS.forEach(cx=>{
+    C.fillStyle='rgba(0,255,65,0.03)';C.fillRect(X(cx-3),Y(TWY_HOTEL.y+TWY_HOTEL.h),X(cx+3)-X(cx-3),Y(APRON.y)-Y(TWY_HOTEL.y+TWY_HOTEL.h));
+    C.strokeStyle='rgba(0,255,65,0.12)';C.lineWidth=1;C.setLineDash([]);
+    C.strokeRect(X(cx-3),Y(TWY_HOTEL.y+TWY_HOTEL.h),X(cx+3)-X(cx-3),Y(APRON.y)-Y(TWY_HOTEL.y+TWY_HOTEL.h));
+  });
+
+  // Service roads
+  const nsx=X(N_SVC.x),nsy=Y(N_SVC.y),nsw=X(N_SVC.x+N_SVC.w)-nsx,nsh=Y(N_SVC.y+N_SVC.h)-nsy;
+  C.fillStyle='rgba(0,255,65,0.04)';C.fillRect(nsx,nsy,nsw,nsh);
+  C.strokeStyle='rgba(0,255,65,0.15)';C.lineWidth=1;
+  C.setLineDash([S(3),S(3)]);C.beginPath();C.moveTo(nsx,nsy+nsh/2);C.lineTo(nsx+nsw,nsy+nsh/2);C.stroke();C.setLineDash([]);
+  const ssx=X(S_SVC.x),ssy=Y(S_SVC.y),ssw=X(S_SVC.x+S_SVC.w)-ssx,ssh=Y(S_SVC.y+S_SVC.h)-ssy;
+  C.fillStyle='rgba(0,255,65,0.02)';C.fillRect(ssx,ssy,ssw,ssh);
+
+  // Terminal building — solid block, bright green outline
+  const tmx=X(TERM.x),tmy=Y(TERM.y),tmw=X(TERM.x+TERM.w)-tmx,tmh=Y(TERM.y+TERM.h)-tmy;
+  C.fillStyle='rgba(0,255,65,0.07)';
+  C.beginPath();C.roundRect(tmx,tmy,tmw,tmh,S(2));C.fill();
+  C.strokeStyle='rgba(0,255,65,0.5)';C.lineWidth=S(1.2);
+  C.beginPath();C.roundRect(tmx,tmy,tmw,tmh,S(2));C.stroke();
+  C.font='bold '+S(8)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.25)';C.textAlign='center';
+  C.fillText('TERMINAL 4',tmx+tmw/2,tmy+tmh/2+S(3));
+
+  // Jetways
+  Object.entries(GATES).forEach(([id,g])=>{
+    const gx=X(g.pos[0]),jTop=Y(JETWAY_TOP),jBot=Y(JETWAY_BOT);
+    C.strokeStyle='rgba(0,255,65,0.25)';C.lineWidth=S(1.5);
+    C.beginPath();C.moveTo(gx,jTop);C.lineTo(gx,jBot);C.stroke();
+    C.fillStyle='rgba(0,255,65,0.15)';C.fillRect(gx-S(3),jBot-S(2),S(6),S(4));
+    C.font='bold '+S(7)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.6)';
+    C.textAlign='center';C.fillText(id,gx,jBot+S(13));
+  });
+
+  // Hub box
+  C.strokeStyle='rgba(0,255,65,0.3)';C.lineWidth=S(1);C.setLineDash([S(4),S(3)]);
+  C.strokeRect(X(HUB_BOX.x),Y(HUB_BOX.y),X(HUB_BOX.x+HUB_BOX.w)-X(HUB_BOX.x),Y(HUB_BOX.y+HUB_BOX.h)-Y(HUB_BOX.y));
+  C.setLineDash([]);
+  C.font=S(6.5)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.35)';C.textAlign='center';
+  C.fillText('VEHICLE HUB',X(HUB_BOX.x+HUB_BOX.w/2),Y(HUB_BOX.y)-S(4));
+
+  // Pier labels
+  C.font='bold '+S(7)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.18)';C.textAlign='center';
+  C.fillText('PIER A',X(340),Y(160));C.fillText('PIER B',X(790),Y(160));
+
+  // ── Route lines — green phosphor dashes ──
+  Object.values(vehs).forEach(v=>{
+    if(!v.route||(v.state!=='DISPATCHED'&&v.state!=='RETURNING'&&v.id!==selId))return;
+    const isSel=v.id===selId;
+    C.strokeStyle='rgba(0,255,65,'+(isSel?'0.6':'0.25')+')';C.lineWidth=S(isSel?1.5:0.8);
+    C.setLineDash([S(4),S(5)]);if(isSel)C.lineDashOffset=-simT*40;
+    C.beginPath();C.moveTo(X(v.pos[0]),Y(v.pos[1]));
+    for(let i=v.ri+1;i<v.route.length;i++)if(v.route[i])C.lineTo(X(v.route[i][0]),Y(v.route[i][1]));
+    C.stroke();C.setLineDash([]);
+  });
+
+  // ── Aircraft — ASDE-X radar blip style ──
+  Object.values(gateS).forEach(gs=>{
+    if(!gs.acPos||!gs.ac)return;
+    const sx=X(gs.acPos[0]),sy=Y(gs.acPos[1]);
+    const isDep=gs.state==='DEPARTING'&&gs.acRi>=2;
+    // Blip: bright square target
+    const bs=S(7);
+    C.save();C.translate(sx,sy);C.rotate(gs.acHead||0);
+    // Velocity vector (short line in direction of travel)
+    if(isDep||gs.state==='ARRIVING'){
+      C.strokeStyle='rgba(0,255,65,0.7)';C.lineWidth=S(0.8);
+      C.beginPath();C.moveTo(0,0);C.lineTo(0,-S(18));C.stroke();
+    }
+    // Target blip (filled diamond shape)
+    C.fillStyle='rgba(0,255,65,0.9)';
+    C.shadowColor='rgba(0,255,65,0.8)';C.shadowBlur=S(6);
+    C.beginPath();C.moveTo(0,-bs);C.lineTo(bs*0.5,0);C.lineTo(0,bs);C.lineTo(-bs*0.5,0);C.closePath();C.fill();
+    C.shadowBlur=0;C.restore();
+    // Data block — top-right of blip, ATC style
+    const dbx=sx+S(10),dby=sy-S(8);
+    C.font=S(6)+'px "JetBrains Mono"';C.textAlign='left';
+    C.fillStyle='rgba(0,255,65,0.9)';C.fillText(gs.ac.flight,dbx,dby);
+    C.fillStyle='rgba(0,255,65,0.45)';C.fillText(gs.state==='AT_GATE'?'GND ':gs.state==='DEPARTING'?'DEP ':gs.state==='ARRIVING'?'ARR ':'   ',dbx,dby+S(8));
+    // Hook line from blip to data block
+    C.strokeStyle='rgba(0,255,65,0.2)';C.lineWidth=S(0.5);
+    C.beginPath();C.moveTo(sx+S(4),sy-S(3));C.lineTo(dbx-S(2),dby-S(1));C.stroke();
+  });
+
+  // ── Vehicles — square radar blips ──
+  Object.values(vehs).forEach(v=>{
+    const sx=X(v.pos[0]),sy=Y(v.pos[1]),hs=S(3.5);
+    const isIdle=v.state==='IDLE';
+    const alpha=isIdle?0.25:1;
+    C.globalAlpha=alpha;
+    if(v.state==='VIOLATION'){
+      const pr=S(8+Math.sin(simT*8)*3);
+      C.strokeStyle='rgba(255,68,68,'+(0.5+Math.sin(simT*8)*0.4)+')';C.lineWidth=S(1.2);
+      C.beginPath();C.arc(sx,sy,pr,0,Math.PI*2);C.stroke();
+      C.fillStyle='#FF4444';C.shadowColor='#FF4444';C.shadowBlur=S(8);
+      C.fillRect(sx-hs*0.7,sy-hs*0.7,hs*1.4,hs*1.4);
+    }else if(v.state==='HOLD'){
+      const flash=Math.sin(simT*8)>0;
+      C.fillStyle=flash?'#FF4444':'rgba(255,68,68,0.3)';
+      C.shadowColor='#FF4444';C.shadowBlur=flash?S(10):0;
+      C.fillRect(sx-hs,sy-hs,hs*2,hs*2);
+    }else{
+      C.fillStyle=v.color;C.fillRect(sx-hs,sy-hs,hs*2,hs*2);
+      if(!isIdle){
+        const p=0.8+Math.sin(v.wobble)*0.2;C.strokeStyle=v.color;
+        C.globalAlpha=0.15*p;C.lineWidth=S(0.8);
+        C.strokeRect(sx-hs*2*p,sy-hs*2*p,hs*4*p,hs*4*p);
+      }
+      if(v.type==='ARFF'&&v.state==='EMERGENCY'){
+        const flash=Math.sin(simT*14)>0;
+        C.globalAlpha=1;C.fillStyle=flash?'#fff':'#FF4444';C.shadowBlur=S(12);
+        C.fillRect(sx-hs*1.5,sy-hs*1.5,hs*3,hs*3);
+      }
+    }
+    C.shadowBlur=0;C.globalAlpha=1;
+    // Transponder dot
+    const xpdrLost=transponderLost===v.id;
+    const xpdrColor=xpdrLost?(Math.sin(simT*10)>0?'#FF4444':'transparent'):'rgba(0,255,65,0.8)';
+    if(xpdrColor!=='transparent'){C.fillStyle=xpdrColor;C.fillRect(sx+hs+S(1),sy-hs-S(1),S(2.5),S(2.5))}
+    // ID label
+    C.font=S(5.5)+'px "JetBrains Mono"';
+    C.fillStyle=v.state==='IDLE'?'rgba(0,255,65,0.2)':v.state==='HOLD'?'rgba(255,68,68,0.9)':'rgba(0,255,65,0.65)';
+    C.textAlign='center';
+    C.fillText(v.state==='HOLD'?'⛔'+v.id:v.id,sx,sy-S(6));
+    // Selection ring
+    if(v.id===selId){C.strokeStyle='rgba(0,255,65,0.8)';C.lineWidth=S(1);C.globalAlpha=0.7;C.strokeRect(sx-hs-S(3),sy-hs-S(3),hs*2+S(6),hs*2+S(6));C.globalAlpha=1}
+  });
+
+  // ── Runway Safety System panel — phosphor green ATC style ──
+  const pnlX=X(10),pnlY=Y(WH-108),pnlW=S(198),pnlH=S(92);
+  C.fillStyle='rgba(2,4,3,0.95)';C.beginPath();C.rect(pnlX,pnlY,pnlW,pnlH);C.fill();
+  C.strokeStyle='rgba(0,255,65,0.3)';C.lineWidth=S(0.8);C.beginPath();C.rect(pnlX,pnlY,pnlW,pnlH);C.stroke();
+  // Header with top border accent
+  C.fillStyle='rgba(0,255,65,0.12)';C.fillRect(pnlX,pnlY,pnlW,S(14));
+  C.font='bold '+S(6)+'px "JetBrains Mono"';C.fillStyle='rgba(0,255,65,0.7)';C.textAlign='left';
+  C.fillText('▸ RUNWAY SAFETY SYS',pnlX+S(7),pnlY+S(10));
+  // RWY 13L
+  const r1c=rwy1State==='CLEAR'?'rgba(0,255,65,0.8)':rwy1State==='APPROACH_90'?'#FFB000':'#FF4444';
+  C.fillStyle=r1c;C.fillRect(pnlX+S(8),pnlY+S(20),S(5),S(5));
+  C.font=S(5.8)+'px "JetBrains Mono"';C.fillStyle=r1c;
+  C.fillText('RWY 13L  '+(rwy1State==='CLEAR'?'CLEAR':'APPCH '+fmt(rwy1ETA)),pnlX+S(18),pnlY+S(25));
+  // RWY 13R
+  const r2c=rwy2State==='CLEAR'?'rgba(0,255,65,0.8)':rwy2State==='APPROACH_90'?'#FFB000':'#FF4444';
+  C.fillStyle=r2c;C.fillRect(pnlX+S(8),pnlY+S(33),S(5),S(5));
+  C.fillStyle=r2c;
+  C.fillText('RWY 13R  '+(rwy2State==='CLEAR'?'CLEAR':'APPCH '+fmt(rwy2ETA)),pnlX+S(18),pnlY+S(38));
+  // Separator
+  C.strokeStyle='rgba(0,255,65,0.12)';C.lineWidth=1;
+  C.beginPath();C.moveTo(pnlX+S(6),pnlY+S(46));C.lineTo(pnlX+pnlW-S(6),pnlY+S(46));C.stroke();
+  // Incursion prevention
+  const ipActive=rwy1State!=='CLEAR'||rwy2State!=='CLEAR';
+  const ipColor=ipActive||emActive?'#FF4444':'rgba(0,255,65,0.8)';
+  const ipFlash=ipActive&&Math.sin(simT*4)<0;
+  if(!ipFlash){
+    C.fillStyle=ipColor;C.fillRect(pnlX+S(8),pnlY+S(53),S(5),S(5));
+    C.font='bold '+S(5.5)+'px "JetBrains Mono"';C.fillStyle=ipColor;
+    C.fillText('INCURSION PREV  '+(ipActive?'■ ACTIVE':'○ STANDBY'),pnlX+S(18),pnlY+S(58));
+  }
+  // Transponder status
+  if(transponderLost){
+    const blink=Math.sin(simT*8)>0;
+    if(blink){C.fillStyle='#FF4444';C.font='bold '+S(5)+'px "JetBrains Mono"';
+    C.fillText('⚠ XPDR LOSS: '+transponderLost+'  T-'+Math.round(transponderLostTimer)+'s',pnlX+S(8),pnlY+S(75));}
+  }
+  // Corner scope decoration
+  C.strokeStyle='rgba(0,255,65,0.15)';C.lineWidth=S(0.5);
+  [[pnlX,pnlY],[pnlX+pnlW,pnlY],[pnlX,pnlY+pnlH],[pnlX+pnlW,pnlY+pnlH]].forEach(([cx,cy],i)=>{
+    const dx=i%2===0?S(8):-S(8),dy=i<2?S(8):-S(8);
+    C.beginPath();C.moveTo(cx+dx,cy);C.lineTo(cx,cy);C.lineTo(cx,cy+dy);C.stroke();
+  });
+
+  // Emergency vignette
+  if(emActive){const a=0.05+Math.sin(simT*4)*0.02;const gr=C.createRadialGradient(CW/2,CH/2,CW*0.2,CW/2,CH/2,CW*0.7);gr.addColorStop(0,'rgba(255,68,68,0)');gr.addColorStop(1,'rgba(255,68,68,'+a+')');C.fillStyle=gr;C.fillRect(0,0,CW,CH)}
+
+  // Paused overlay
+  if(simPaused){
+    C.fillStyle='rgba(0,0,0,0.35)';C.fillRect(0,0,CW,CH);
+    C.font='bold '+S(14)+'px "JetBrains Mono"';C.fillStyle='rgba(255,176,0,0.9)';
+    C.textAlign='center';C.fillText('⏸ PAUSED',CW/2,CH/2);
+    C.font=S(7)+'px "JetBrains Mono"';C.fillStyle='rgba(255,176,0,0.5)';
+    C.fillText('SPACE or click PAUSE to resume',CW/2,CH/2+S(18));
+  }
+
+  requestAnimationFrame(render);
+}
+
+// ═══════════════════════════════════════════════════
+// SIMULATION TICK
+// ═══════════════════════════════════════════════════
+function simTick(){
+  if(simPaused||document.hidden)return;
+  const dt=TICK/1000;simT+=dt;dispCD-=dt;
+  Object.values(vehs).forEach(v=>tickV(v,dt));
+  Object.values(gateS).forEach(gs=>tickGate(gs,dt));
+  tickInbound();
+  tickRunwaySafety(dt);
+  if(!emActive&&simT>=nextEm)triggerEm();
+  if(emActive){emTimer+=dt;if(emTimer>=EM_DUR)resolveEm()}
+}
+function uiTick(){if(simPaused||document.hidden)return;updKPI();renderFleet();renderInbound();if(selId)updCard()}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+function init(){
+  FLEET.forEach((id,i)=>{vehs[id]=mkVeh(id,i)});
+  Object.keys(GATES).forEach(id=>{gateS[id]=mkGate(id)});
+
+  // Pre-populate 6 gates across both piers
+  // A1: mid-service
+  const g1=gateS['A1'];
+  g1.state='AT_GATE';g1.ac={flight:'AA 102',airline:'AA',color:'#CC0000'};
+  g1.acPos=[...GATES.A1.pos];g1.turnStart=simT-40;g1.needed=[];g1.assigned=['FUEL-01','BAG-01'];
+  const f1=vehs['FUEL-01'];if(f1){f1.state='SERVICING';f1.gate='A1';f1.task='Fuel · AA 102';f1.svcT=50;f1.pos=[GATES.A1.pos[0]+15,GATES.A1.pos[1]]}
+  const b1=vehs['BAG-01'];if(b1){b1.state='SERVICING';b1.gate='A1';b1.task='Baggage · AA 102';b1.svcT=70;b1.pos=[GATES.A1.pos[0]-12,GATES.A1.pos[1]+5]}
+
+  // A3: at gate, just arrived — needs full service
+  const g3=gateS['A3'];
+  g3.state='AT_GATE';g3.ac={flight:'DL 318',airline:'DL',color:'#003366'};
+  g3.acPos=[...GATES.A3.pos];g3.turnStart=simT;g3.needed=['GPU','FUEL','BAG','CAT'];g3.assigned=[];
+
+  // B1: mid-service (east pier)
+  const gb1=gateS['B1'];
+  gb1.state='AT_GATE';gb1.ac={flight:'WN 742',airline:'WN',color:'#FF6600'};
+  gb1.acPos=[...GATES.B1.pos];gb1.turnStart=simT-80;gb1.needed=[];gb1.assigned=['BAG-03','GPU-02'];
+  const b3=vehs['BAG-03'];if(b3){b3.state='SERVICING';b3.gate='B1';b3.task='Baggage · WN 742';b3.svcT=60;b3.pos=[GATES.B1.pos[0]+12,GATES.B1.pos[1]]}
+  const gp2=vehs['GPU-02'];if(gp2){gp2.state='SERVICING';gp2.gate='B1';gp2.task='GPU · WN 742';gp2.svcT=40;gp2.pos=[GATES.B1.pos[0]-10,GATES.B1.pos[1]+4]}
+
+  // B3: at gate, nearly done
+  const gb3=gateS['B3'];
+  gb3.state='AT_GATE';gb3.ac={flight:'B6 219',airline:'B6',color:'#00B2A9'};
+  gb3.acPos=[...GATES.B3.pos];gb3.turnStart=simT-120;gb3.needed=[];gb3.assigned=['CAT-02'];
+  const ct2=vehs['CAT-02'];if(ct2){ct2.state='SERVICING';ct2.gate='B3';ct2.task='Catering · B6 219';ct2.svcT=75;ct2.pos=[GATES.B3.pos[0]+10,GATES.B3.pos[1]-5]}
+
+  // B5: at gate, just docked
+  const gb5=gateS['B5'];
+  gb5.state='AT_GATE';gb5.ac={flight:'UA 447',airline:'UA',color:'#003087'};
+  gb5.acPos=[...GATES.B5.pos];gb5.turnStart=simT;gb5.needed=['GPU','FUEL','BAG','CAT'];gb5.assigned=[];
+
+  // A2: arriving now
+  spawnArr('A2');
+
+  // B2, B4: next arrivals soon
+  gateS['B2'].nextArr=simT+20;
+  gateS['B4'].nextArr=simT+40;
+
+  // Seed turnaround avg with realistic historical data
+  turnTimes.push(245,280,260,290,255);
+
+  [{txt:'System online — JFK Terminal 4 · 8 gates',type:'c',tag:'ONLINE',time:'14:30:00'},
+   {txt:'AA 102 at Gate A1 — servicing',type:'a',tag:'At Gate',time:'14:30:02'},
+   {txt:'WN 742 at Gate B1 — mid-turn',type:'a',tag:'At Gate',time:'14:29:40'},
+   {txt:'B6 219 at Gate B3 — nearly done',type:'c',tag:'At Gate',time:'14:29:15'},
+   {txt:'UA 447 at Gate B5 — just docked',type:'a',tag:'At Gate',time:'14:31:00'},
+  ].reverse().forEach(e=>dispLog.push(e));
+  renderLog();
+
+  document.getElementById('sim-header-veh').textContent=FLEET.length+' vehicles';
+  setInterval(simTick,TICK);
+  setInterval(uiTick,500);
+  setInterval(()=>{if(!simPaused&&!document.hidden){runDispatch();dispCD=DISP_INT}},DISP_INT*1000);
+  setTimeout(runDispatch,2000);
+  requestAnimationFrame(render);
+}
+// ── Onboarding overlay ──
+(function(){
+  const ob=document.getElementById('onboarding');
+  const dismiss=()=>{ob.classList.add('hidden');try{localStorage.setItem('gc_seen','1')}catch(e){}};
+  if(localStorage.getItem('gc_seen')){ob.classList.add('hidden')}
+  document.getElementById('ob-dismiss').addEventListener('click',dismiss);
+  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&!ob.classList.contains('hidden'))dismiss()});
+})();
+
+init();
+</script>
+
+</section><!-- /#simulation -->
+</main>
+
+<footer id="site-footer">
+  <span class="footer-brand">GROUNDCONTROL AI</span>
+  <nav class="footer-links">
+    <a href="/">← Live JFK Tracker</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+  </nav>
+</footer>
+
+</body>
+</html>
