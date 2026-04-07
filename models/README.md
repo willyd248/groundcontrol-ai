@@ -1,5 +1,8 @@
 # models/ — Saved Policy Checkpoints
 
+## session5_reactive_300k.zip
+Pre-divergence reactive baseline. HOLD rate ~0% on eval. Matches FCFS, occasional 1-2 min wins on high-choice schedules (seed=116: −2.1 min at 300k). Use as comparison floor for future training runs. See `CHECKPOINT_1M_BATTERY.md` Section 2 for the 300k delta table.
+
 ## session5_fixed_step_250000_steps.zip
 Intermediate snapshot at 250k steps. Policy not yet beating FCFS. Saved for reference.
 
