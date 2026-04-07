@@ -278,7 +278,7 @@ h1.hero-headline em{color:var(--green);font-style:normal;text-shadow:0 0 30px rg
     <div class="sim-header-divider"></div>
     <span class="sim-header-label">AI dispatch active</span>
     <div class="sim-header-divider"></div>
-    <span class="sim-header-label">18 vehicles</span>
+    <span class="sim-header-label" id="sim-header-veh">18 vehicles</span>
   </div>
 
 <!-- Onboarding overlay -->
@@ -583,7 +583,15 @@ function tickV(v,dt){
 // ═══════════════════════════════════════════════════
 function mkGate(id){return{id,state:'EMPTY',ac:null,assigned:[],needed:[],turnStart:0,nextArr:0,acPos:null,acRoute:null,acRi:0,acRp:0,acHead:0}}
 function spawnArr(gid){
-  const gs=gateS[gid],al=nxtAl(),fl=nxtFl(al);
+  const gs=gateS[gid];
+  // Use inbound queue entry for this gate if one exists (makes panel accurate)
+  const qIdx=inboundQ.findIndex(q=>q.gate===gid);
+  let al,fl;
+  if(qIdx>=0){
+    const q=inboundQ[qIdx];fl=q.flight;
+    al=AIRLINES.find(a=>a.color===q.color)||{code:fl.split(' ')[0],color:q.color};
+    inboundQ.splice(qIdx,1);
+  }else{al=nxtAl();fl=nxtFl(al);}
   gs.state='ARRIVING';gs.ac={flight:fl,airline:al.code,color:al.color};
   gs.acRoute=routeAcArr(gid);gs.acRi=0;gs.acRp=0;gs.acHead=0;
   gs.acPos=[...gs.acRoute[0]];
@@ -656,7 +664,7 @@ function tickInbound(){
   inboundQ=inboundQ.filter(q=>q.eta>-5);
   while(inboundQ.length<2){const al=nxtAl(),fl=nxtFl(al);const eta=120+Math.random()*180;inboundQ.push({flight:fl,color:al.color,eta,maxEta:eta,gate:null})}
   inboundQ.forEach(q=>{q.eta-=TICK/1000});
-  inboundQ.forEach(q=>{if(!q.gate){const empty=ACTIVE_GATES.find(gid=>{const gs=gateS[gid];return gs.state==='EMPTY'&&gs.nextArr>0&&!inboundQ.some(iq=>iq.gate===gid&&iq!==q)});if(empty)q.gate=empty}});
+  inboundQ.forEach(q=>{if(!q.gate){const empty=ACTIVE_GATES.find(gid=>{const gs=gateS[gid];return gs.state==='EMPTY'&&!inboundQ.some(iq=>iq.gate===gid&&iq!==q)});if(empty){q.gate=empty;const gs=gateS[empty];if(!gs.nextArr||gs.nextArr-simT>q.eta+5)gs.nextArr=simT+Math.max(8,q.eta)}}});
 }
 function runDispatch(){ACTIVE_GATES.forEach(gid=>{const gs=gateS[gid];if(gs.state==='AT_GATE'&&gs.needed.length>0)reqSvc(gid);if(gs.state==='EMPTY'&&!gs.nextArr)gs.nextArr=simT+rndDelay()})}
 function triggerEm(){
@@ -1225,6 +1233,7 @@ function init(){
   ].reverse().forEach(e=>dispLog.push(e));
   renderLog();
 
+  document.getElementById('sim-header-veh').textContent=FLEET.length+' vehicles';
   setInterval(simTick,TICK);
   setInterval(uiTick,500);
   setInterval(()=>{if(!simPaused&&!document.hidden){runDispatch();dispCD=DISP_INT}},DISP_INT*1000);
