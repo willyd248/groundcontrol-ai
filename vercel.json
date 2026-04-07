@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/opensky.js": {
+      "maxDuration": 10
+    }
+  }
+}
