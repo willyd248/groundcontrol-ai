@@ -1,6 +1,6 @@
 # CHECKPOINT_1M_BATTERY.md
 
-**Generated:** 2026-04-07 18:58 EDT  
+**Generated:** 2026-04-07 18:59 EDT  
 **Checkpoint:** `checkpoints/airport_ppo_1000000_steps.zip`  
 **Branch:** `fix-decision-trigger`
 
@@ -93,18 +93,18 @@ seed=116 has 12 choice ticks — one of the highest-contention schedules in the 
 
 ## Section 4 — Training Reward Status
 
-TensorBoard latest step: **999,424** (ep_rew_mean=64.096)  
-Decisions/ep: 34.08  
+TensorBoard latest step: **1,015,808** (ep_rew_mean=65.0258)  
+Decisions/ep: 34.37  
 Conflict term rate: 0.0  
 Entropy loss: -0.4263  
 
 **Reward since plateau start (~220k):**  
   Min: 62.879  
   Max: 65.317  
-  Most recent: 64.096  
-  Trend: **flat**  
+  Most recent: 65.026  
+  Trend: **rising**  
 
-ep_rew_mean last 5: `[(933888, 64.6322), (950272, 64.983), (966656, 64.749), (983040, 65.0528), (999424, 64.096)]`
+ep_rew_mean last 5: `[(950272, 64.983), (966656, 64.749), (983040, 65.0528), (999424, 64.096), (1015808, 65.0258)]`
 
 **eval callback** (seed=42, known non-strategic — expected 0.0):**  
   delay_improvement last 3: `[(900000, 0.0), (950000, 0.0), (1000000, 0.0)]`  
@@ -114,7 +114,7 @@ ep_rew_mean last 5: `[(933888, 64.6322), (950272, 64.983), (966656, 64.749), (98
 
 ## Section 5 — Verdict
 
-**Scenario B — Converged at reactive-only ceiling.**  
-RL beats FCFS on only 0/20 seeds after 1M steps (50% of training budget). Reward has been flat since ~220k steps (62.9–65.3). Mean delta is +0.39 min (vs -0.07 at 300k). The policy appears to have converged to immediate-assign behavior — it is not learning to hold strategically in most cases. This is a genuine concern for the remaining 1M steps.
+**Scenario C — Regressing.**  
+RL is worse than FCFS on 3 schedules vs better on 0. Mean delta +0.39 min vs -0.07 at 300k. Policy is degrading. Immediate investigation required.
 
 **Anomaly flags:** none
