@@ -1,0 +1,98 @@
+[
+  {
+    "flight_id": "AA101",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 0,
+    "scheduled_departure": 3600,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "DL202",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 300,
+    "scheduled_departure": 3900,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "UA303",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 600,
+    "scheduled_departure": 5400,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "WN404",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 900,
+    "scheduled_departure": 4200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "B6505",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 1200,
+    "scheduled_departure": 4500,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "NK606",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 1500,
+    "scheduled_departure": 3600,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "AA707",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 3600,
+    "scheduled_departure": 6600,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "DL808",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 3900,
+    "scheduled_departure": 6900,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "UA909",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 4200,
+    "scheduled_departure": 7200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "WN010",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 4500,
+    "scheduled_departure": 7500,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "B6111",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 5400,
+    "scheduled_departure": 7200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "NK212",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 5700,
+    "scheduled_departure": 8100,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  }
+]
