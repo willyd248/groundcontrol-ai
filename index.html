@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GroundControl AI — AI-Powered Airport Ground Operations</title>
-<meta name="description" content="Real-time AI dispatch optimization for airport ground handling. Visualize vehicle routing, runway safety, and fleet coordination in a live simulation.">
+<title>GroundControl AI — Airport Ground Operations Simulation Game</title>
+<meta name="description" content="Free browser-based airport ground operations simulation game. Manage pushback, taxiing, and gate assignments. AI dispatch engine coordinates 18 ground vehicles across 8 active gates. Play instantly — no download.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://groundcontrol-ai.vercel.app/">
 <link rel="sitemap" type="application/xml" href="/sitemap.xml">
@@ -80,7 +80,7 @@
 ]
 </script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23020403'/><circle cx='16' cy='16' r='11' fill='none' stroke='%2300ff41' stroke-width='1.5'/><circle cx='16' cy='16' r='6' fill='none' stroke='%2300ff41' stroke-width='.8' opacity='.5'/><line x1='16' y1='5' x2='16' y2='27' stroke='%2300ff41' stroke-width='.8' opacity='.4'/><line x1='5' y1='16' x2='27' y2='16' stroke='%2300ff41' stroke-width='.8' opacity='.4'/><line x1='16' y1='16' x2='25' y2='10' stroke='%2300ff41' stroke-width='1.5' opacity='.9'/></svg>">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#020403;--bg2:#040604;--bg3:#070a07;--border:rgba(0,255,65,0.1);--t1:#a8ffa8;--t2:#4a7a4a;--t3:#2a4a2a;--blue:#00ccff;--green:#00ff41;--amber:#FFB000;--red:#FF4444;--purple:#cc99ff;--cyan:#00ffdd;--mono:'JetBrains Mono',monospace;--sans:'JetBrains Mono',monospace}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -249,21 +249,378 @@ h1.hero-headline em{color:var(--green);font-style:normal;text-shadow:0 0 30px rg
 @keyframes si{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
 </style>
+<style>
+/* ════════════════════════════════════════════
+   STITCH DESIGN SYSTEM — GroundControl AI
+   Indie Game Landing Page Redesign
+   ════════════════════════════════════════════ */
+:root {
+  --lp-bg: #121221;
+  --lp-surface: #1e1e2e;
+  --lp-surface-low: #1a1a2a;
+  --lp-surface-high: #292839;
+  --lp-surface-highest: #333344;
+  --lp-yellow: #FFD60A;
+  --lp-yellow-warm: #fff5dc;
+  --lp-blue: #38BDF8;
+  --lp-blue-dim: #7BD0FF;
+  --lp-text: #e3e0f7;
+  --lp-text-dim: #d0c6ab;
+  --lp-text-muted: #999077;
+  --lp-outline: rgba(77,70,50,0.15);
+  --sans: 'Space Grotesk', 'JetBrains Mono', monospace;
+}
+body { background: var(--lp-bg); color: var(--lp-text); }
+
+/* ── Hero ── */
+#hero {
+  min-height: 100vh;
+  background: var(--lp-bg);
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: 0 80px;
+  gap: 60px;
+  border-bottom: none;
+}
+#hero > svg.hero-grid-bg { display: none; }
+#hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+  pointer-events: none;
+}
+#hero::after {
+  content: '';
+  position: absolute;
+  top: -20%; left: -10%;
+  width: 60%; height: 80%;
+  background: radial-gradient(ellipse, rgba(255,214,10,0.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+.hero-content { position: relative; z-index: 2; padding: 120px 0 80px; }
+.hero-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.2);
+  border-radius: 4px; padding: 6px 14px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--lp-blue);
+  margin-bottom: 28px;
+}
+.hero-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--lp-blue); animation: pd 2s infinite; }
+h1.hero-title {
+  font-family: var(--sans);
+  font-size: clamp(42px, 6vw, 80px);
+  font-weight: 700; color: var(--lp-yellow-warm);
+  line-height: 1.0; letter-spacing: -0.02em; margin-bottom: 24px;
+}
+h1.hero-title .accent { color: var(--lp-yellow); text-shadow: 0 0 40px rgba(255,214,10,0.3); }
+.hero-tagline {
+  font-family: var(--mono); font-size: 13px; color: var(--lp-text-dim);
+  line-height: 1.8; max-width: 440px; margin-bottom: 40px;
+}
+.cta-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--lp-yellow); color: #3b2f00;
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 16px 36px; border: none; border-radius: 4px;
+  cursor: pointer; text-decoration: none;
+  transition: box-shadow .15s, transform .1s;
+}
+.cta-primary:hover { box-shadow: 0 0 28px rgba(255,214,10,0.35); transform: translateY(-1px); }
+.hero-stats {
+  display: flex; gap: 40px; margin-top: 52px;
+  padding-top: 32px; border-top: 1px solid rgba(77,70,50,0.25);
+}
+.hs-item { display: flex; flex-direction: column; gap: 4px; }
+.hs-value {
+  font-family: var(--mono); font-size: 30px; font-weight: 700;
+  color: var(--lp-yellow-warm); letter-spacing: -1px; font-variant-numeric: tabular-nums;
+}
+.hs-unit { display: none; }
+.hs-label {
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--lp-text-muted);
+}
+.hero-art {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+}
+.hero-art svg {
+  width: 100%; max-width: 560px; height: auto; border-radius: 4px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(56,189,248,0.12);
+}
+
+/* ── Simulation ── */
+#simulation { background: var(--bg); }
+
+/* ── Shared section styles ── */
+.section-eyebrow {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase; color: var(--lp-blue);
+  margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+}
+.section-eyebrow::before {
+  content: ''; display: inline-block; width: 28px; height: 1px;
+  background: var(--lp-blue); opacity: 0.5;
+}
+.section-title {
+  font-family: var(--sans); font-size: clamp(26px, 4vw, 44px); font-weight: 700;
+  color: var(--lp-yellow-warm); letter-spacing: -0.02em;
+  line-height: 1.1; margin-bottom: 56px; max-width: 620px;
+}
+.section-title .accent { color: var(--lp-yellow); }
+
+/* ── Features ── */
+#features { background: var(--lp-surface); padding: 96px 80px; }
+.features-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
+.feature-card {
+  background: rgba(26,26,42,0.8);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border-radius: 4px; padding: 32px 24px;
+  border: 1px solid rgba(77,70,50,0.15);
+  position: relative; overflow: hidden;
+  transition: background .2s, border-color .2s;
+}
+.feature-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--card-accent, var(--lp-yellow)), transparent);
+  opacity: 0; transition: opacity .2s;
+}
+.feature-card:hover { background: rgba(41,40,57,0.9); border-color: rgba(77,70,50,0.3); }
+.feature-card:hover::before { opacity: 1; }
+.feature-icon { font-size: 28px; margin-bottom: 16px; display: block; }
+.feature-card-title {
+  font-family: var(--sans); font-size: 16px; font-weight: 700;
+  color: var(--lp-yellow-warm); margin-bottom: 10px; letter-spacing: -0.01em;
+}
+.feature-card-desc { font-family: var(--mono); font-size: 11px; color: var(--lp-text-muted); line-height: 1.7; }
+
+/* ── How to Play ── */
+#how-to-play { background: var(--lp-surface-low); padding: 96px 80px; }
+.steps-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
+.step-card {
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 32px 24px; border-radius: 4px;
+  background: rgba(30,30,46,0.5); border: 1px solid rgba(77,70,50,0.12);
+}
+.step-number {
+  font-family: var(--mono); font-size: 52px; font-weight: 700;
+  color: var(--lp-yellow); opacity: 0.35; letter-spacing: -3px; line-height: 1;
+}
+.step-title { font-family: var(--sans); font-size: 15px; font-weight: 700; color: var(--lp-yellow-warm); letter-spacing: -0.01em; }
+.step-desc { font-family: var(--mono); font-size: 11px; color: var(--lp-text-muted); line-height: 1.7; }
+
+/* ── FAQ ── */
+#faq { background: var(--lp-bg); padding: 96px 80px; }
+.faq-list { margin-top: 48px; max-width: 720px; }
+.faq-item { border-top: 1px solid rgba(77,70,50,0.2); padding: 28px 0; }
+.faq-item:last-child { border-bottom: 1px solid rgba(77,70,50,0.2); }
+.faq-q {
+  font-family: var(--sans); font-size: 17px; font-weight: 600;
+  color: var(--lp-yellow-warm); letter-spacing: -0.01em; margin-bottom: 12px;
+}
+.faq-a { font-family: var(--mono); font-size: 12px; color: var(--lp-text-muted); line-height: 1.8; }
+
+/* ── Footer ── */
+#site-footer {
+  background: var(--lp-surface-low); padding: 40px 80px;
+  border-top: 1px solid rgba(77,70,50,0.2);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+}
+.footer-brand { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--lp-text-muted); }
+.footer-links a { font-family: var(--mono); font-size: 11px; color: var(--lp-text-muted); letter-spacing: .5px; }
+.footer-links a:hover { color: var(--lp-text); }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  #hero { grid-template-columns: 1fr; padding: 0 48px; gap: 0; }
+  .hero-art { display: none; }
+  .hero-content { padding: 100px 0 60px; }
+  .features-grid, .steps-grid { grid-template-columns: repeat(2,1fr); }
+  #features, #how-to-play, #faq, #site-footer { padding: 72px 48px; }
+}
+@media (max-width: 640px) {
+  #hero { padding: 0 24px; min-height: 100svh; }
+  .hero-stats { gap: 24px; flex-wrap: wrap; }
+  h1.hero-title { font-size: clamp(36px, 11vw, 60px); }
+  .features-grid, .steps-grid { grid-template-columns: 1fr; }
+  #features, #how-to-play, #faq { padding: 60px 24px; }
+  #site-footer { padding: 32px 24px; }
+}
+</style>
 </head>
 <body>
 
 <!-- ── Hero landing section ── -->
 <header id="hero">
-  <svg class="hero-grid-bg" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(0,255,65,0.06)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(#grid)"/></svg>
-  <div class="hero-eyebrow">Ground Operations · AI Dispatch · JFK Terminal 4</div>
-  <h1 class="hero-headline">Airport ground ops,<br><em>dispatched by AI.</em></h1>
-  <p class="hero-sub">Manual ramp dispatch costs airlines $150/min in gate delays. GroundControl autonomously coordinates 18 ground vehicles — fuel trucks, baggage tugs, pushback tractors — across 8 active gates using real-time constraint solving and runway safety monitoring.</p>
-  <a class="hero-cta" href="#simulation">Watch AI dispatch live →</a>
-  <div class="hero-stats">
-    <div class="hs-item"><span class="hs-value">18</span><span class="hs-unit">vehicles</span><span class="hs-label">Coordinated</span></div>
-    <div class="hs-item"><span class="hs-value">8</span><span class="hs-unit">gates</span><span class="hs-label">Active</span></div>
-    <div class="hs-item"><span class="hs-value">~22%</span><span class="hs-unit">reduction</span><span class="hs-label">Avg turnaround</span></div>
-    <div class="hs-item"><span class="hs-value">2</span><span class="hs-unit">runways</span><span class="hs-label">Safety monitored</span></div>
+  <div class="hero-content">
+    <div class="hero-chip"><span class="hero-chip-dot"></span>Browser Simulation Game · Free</div>
+    <h1 class="hero-title">Ground<br><span class="accent">Control</span> AI</h1>
+    <p class="hero-tagline">Manage pushback, taxiing, and gate assignments at a busy international airport. The AI dispatch engine coordinates 18 ground vehicles — you just watch the chaos unfold.</p>
+    <a class="cta-primary" href="#simulation">▶ Play Now — Free</a>
+    <div class="hero-stats">
+      <div class="hs-item"><span class="hs-value">18</span><span class="hs-label">Vehicles</span></div>
+      <div class="hs-item"><span class="hs-value">8</span><span class="hs-label">Gates</span></div>
+      <div class="hs-item"><span class="hs-value">∞</span><span class="hs-label">Flights</span></div>
+      <div class="hs-item"><span class="hs-value">0</span><span class="hs-label">Cost</span></div>
+    </div>
+  </div>
+  <div class="hero-art">
+    <svg viewBox="0 0 560 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="560" height="360" fill="#0d0d1c"/>
+      <defs>
+        <pattern id="art-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+          <path d="M24 0L0 0 0 24" fill="none" stroke="rgba(56,189,248,0.04)" stroke-width="0.5"/>
+        </pattern>
+        <radialGradient id="vignette" cx="50%" cy="50%" r="60%">
+          <stop offset="0%" stop-color="transparent"/>
+          <stop offset="100%" stop-color="#0d0d1c" stop-opacity="0.5"/>
+        </radialGradient>
+      </defs>
+      <rect width="560" height="360" fill="url(#art-grid)"/>
+      <!-- Runway 1 -->
+      <rect x="8" y="16" width="544" height="14" rx="2" fill="#161625"/>
+      <line x1="8" y1="23" x2="552" y2="23" stroke="#FFD60A" stroke-width="1.5" stroke-dasharray="18,14" opacity="0.65"/>
+      <rect x="8" y="16" width="7" height="14" rx="1" fill="#FFD60A" opacity="0.5"/>
+      <rect x="17" y="16" width="7" height="14" rx="1" fill="#FFD60A" opacity="0.5"/>
+      <rect x="530" y="16" width="7" height="14" rx="1" fill="#FFD60A" opacity="0.5"/>
+      <rect x="539" y="16" width="7" height="14" rx="1" fill="#FFD60A" opacity="0.5"/>
+      <text x="30" y="13" fill="#FFD60A" font-size="6" font-family="JetBrains Mono,monospace" opacity="0.7" font-weight="700">13L/31R</text>
+      <!-- Runway 2 -->
+      <rect x="8" y="36" width="544" height="12" rx="2" fill="#161625"/>
+      <line x1="8" y1="42" x2="552" y2="42" stroke="#FFD60A" stroke-width="1" stroke-dasharray="18,14" opacity="0.3"/>
+      <rect x="8" y="36" width="7" height="12" rx="1" fill="#FFD60A" opacity="0.25"/>
+      <rect x="17" y="36" width="7" height="12" rx="1" fill="#FFD60A" opacity="0.25"/>
+      <rect x="530" y="36" width="7" height="12" rx="1" fill="#FFD60A" opacity="0.25"/>
+      <rect x="539" y="36" width="7" height="12" rx="1" fill="#FFD60A" opacity="0.25"/>
+      <text x="30" y="33" fill="#FFD60A" font-size="6" font-family="JetBrains Mono,monospace" opacity="0.35" font-weight="700">13R/31L</text>
+      <!-- Taxiway Hotel -->
+      <rect x="8" y="54" width="544" height="8" rx="1" fill="#1a1a2a"/>
+      <line x1="8" y1="58" x2="552" y2="58" stroke="#38BDF8" stroke-width="0.75" opacity="0.2"/>
+      <text x="8" y="51" fill="#38BDF8" font-size="5.5" font-family="JetBrains Mono,monospace" opacity="0.45" font-weight="700">TWY-H</text>
+      <!-- Apron -->
+      <rect x="48" y="70" width="375" height="120" rx="2" fill="#131322"/>
+      <!-- Service road -->
+      <line x1="48" y1="116" x2="423" y2="116" stroke="#1e2035" stroke-width="5"/>
+      <!-- Connector taxiways -->
+      <line x1="90" y1="62" x2="90" y2="138" stroke="#1e1e2e" stroke-width="4"/>
+      <line x1="152" y1="62" x2="152" y2="138" stroke="#1e1e2e" stroke-width="4"/>
+      <line x1="214" y1="62" x2="214" y2="138" stroke="#1e1e2e" stroke-width="4"/>
+      <line x1="276" y1="62" x2="276" y2="138" stroke="#1e1e2e" stroke-width="4"/>
+      <line x1="328" y1="62" x2="328" y2="138" stroke="#1e1e2e" stroke-width="4"/>
+      <line x1="380" y1="62" x2="380" y2="138" stroke="#1e1e2e" stroke-width="4"/>
+      <!-- Terminal building -->
+      <rect x="48" y="190" width="388" height="26" rx="3" fill="#1e1e2e"/>
+      <rect x="48" y="190" width="388" height="3" rx="1" fill="#292839"/>
+      <text x="242" y="207" fill="#4d4632" font-size="7" font-family="JetBrains Mono,monospace" text-anchor="middle" font-weight="700">TERMINAL 4 · KJFK</text>
+      <!-- Jetways -->
+      <line x1="90" y1="190" x2="90" y2="142" stroke="#292839" stroke-width="4" stroke-linecap="round"/>
+      <line x1="152" y1="190" x2="152" y2="142" stroke="#292839" stroke-width="4" stroke-linecap="round"/>
+      <line x1="214" y1="190" x2="214" y2="142" stroke="#292839" stroke-width="4" stroke-linecap="round"/>
+      <line x1="276" y1="190" x2="276" y2="142" stroke="#292839" stroke-width="4" stroke-linecap="round"/>
+      <line x1="328" y1="190" x2="328" y2="142" stroke="#292839" stroke-width="4" stroke-linecap="round"/>
+      <line x1="380" y1="190" x2="380" y2="142" stroke="#292839" stroke-width="4" stroke-linecap="round"/>
+      <!-- Gate A1 — AA (red) -->
+      <circle cx="90" cy="138" r="9" fill="#1e1e2e" stroke="#38BDF8" stroke-width="1"/>
+      <rect x="87" y="128" width="6" height="14" rx="3" fill="#CC0000"/>
+      <rect x="78" y="133" width="10" height="3" rx="1" fill="#CC0000" opacity="0.8"/>
+      <rect x="92" y="133" width="10" height="3" rx="1" fill="#CC0000" opacity="0.8"/>
+      <circle cx="90" cy="138" r="15" fill="#CC0000" opacity="0.05"/>
+      <!-- Gate A2 — UA (blue) -->
+      <circle cx="152" cy="138" r="9" fill="#1e1e2e" stroke="#38BDF8" stroke-width="1"/>
+      <rect x="149" y="128" width="6" height="14" rx="3" fill="#003087"/>
+      <rect x="140" y="133" width="10" height="3" rx="1" fill="#003087" opacity="0.8"/>
+      <rect x="154" y="133" width="10" height="3" rx="1" fill="#003087" opacity="0.8"/>
+      <circle cx="152" cy="138" r="15" fill="#003087" opacity="0.06"/>
+      <!-- Gate A3 — Empty -->
+      <circle cx="214" cy="138" r="7" fill="#1a1a2a" stroke="#333344" stroke-width="1"/>
+      <text x="214" y="141" fill="#4d4632" font-size="6" text-anchor="middle" font-family="JetBrains Mono,monospace">A3</text>
+      <!-- Gate B1 — WN (orange) -->
+      <circle cx="276" cy="138" r="9" fill="#1e1e2e" stroke="#FFD60A" stroke-width="1" opacity="0.9"/>
+      <rect x="273" y="128" width="6" height="14" rx="3" fill="#FF6600"/>
+      <rect x="264" y="133" width="10" height="3" rx="1" fill="#FF6600" opacity="0.8"/>
+      <rect x="278" y="133" width="10" height="3" rx="1" fill="#FF6600" opacity="0.8"/>
+      <circle cx="276" cy="138" r="15" fill="#FF6600" opacity="0.05"/>
+      <!-- Gate B2 — DL (navy) -->
+      <circle cx="328" cy="138" r="9" fill="#1e1e2e" stroke="#38BDF8" stroke-width="1"/>
+      <rect x="325" y="128" width="6" height="14" rx="3" fill="#003366"/>
+      <rect x="316" y="133" width="10" height="3" rx="1" fill="#003366" opacity="0.8"/>
+      <rect x="330" y="133" width="10" height="3" rx="1" fill="#003366" opacity="0.8"/>
+      <circle cx="328" cy="138" r="15" fill="#003366" opacity="0.06"/>
+      <!-- Gate B3 — Empty -->
+      <circle cx="380" cy="138" r="7" fill="#1a1a2a" stroke="#333344" stroke-width="1"/>
+      <text x="380" y="141" fill="#4d4632" font-size="6" text-anchor="middle" font-family="JetBrains Mono,monospace">B3</text>
+      <!-- Ground vehicle: Fuel truck -->
+      <rect x="249" y="113" width="10" height="6" rx="2" fill="#EF4444" opacity="0.9"/>
+      <!-- Service path -->
+      <path d="M 380 116 L 276 116 L 276 138" stroke="#38BDF8" stroke-width="0.75" stroke-dasharray="4,4" opacity="0.35"/>
+      <!-- Baggage tug -->
+      <rect x="122" y="108" width="8" height="6" rx="1.5" fill="#F59E0B" opacity="0.9"/>
+      <!-- Pushback tractor -->
+      <rect x="192" y="117" width="8" height="6" rx="1.5" fill="#3B82F6" opacity="0.9"/>
+      <!-- Aircraft taxiing to Gate B1 -->
+      <rect x="272" y="69" width="8" height="14" rx="3" fill="#FF6600" opacity="0.6"/>
+      <rect x="261" y="74" width="9" height="3" rx="1" fill="#FF6600" opacity="0.4"/>
+      <rect x="281" y="74" width="9" height="3" rx="1" fill="#FF6600" opacity="0.4"/>
+      <path d="M 276 42 L 276 62 L 276 78" stroke="#FFD60A" stroke-width="1" stroke-dasharray="5,5" opacity="0.2"/>
+      <!-- Incoming aircraft on Runway 1 -->
+      <rect x="436" y="14" width="8" height="14" rx="3" fill="#00B2A9" opacity="0.9"/>
+      <rect x="424" y="19" width="10" height="3" rx="1" fill="#00B2A9" opacity="0.65"/>
+      <rect x="446" y="19" width="10" height="3" rx="1" fill="#00B2A9" opacity="0.65"/>
+      <line x1="400" y1="23" x2="430" y2="23" stroke="#00B2A9" stroke-width="1" opacity="0.2"/>
+      <line x1="390" y1="21" x2="425" y2="21" stroke="#00B2A9" stroke-width="0.5" opacity="0.12"/>
+      <!-- Vehicle Hub -->
+      <rect x="444" y="80" width="100" height="80" rx="3" fill="#161625"/>
+      <rect x="444" y="80" width="100" height="3" rx="1" fill="#292839"/>
+      <text x="494" y="93" fill="#4d4632" font-size="5.5" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="700">VEH HUB</text>
+      <circle cx="460" cy="104" r="3.5" fill="#F59E0B" opacity="0.85"/>
+      <circle cx="474" cy="104" r="3.5" fill="#F59E0B" opacity="0.85"/>
+      <circle cx="488" cy="104" r="3.5" fill="#EF4444" opacity="0.85"/>
+      <circle cx="502" cy="104" r="3.5" fill="#8B5CF6" opacity="0.85"/>
+      <circle cx="516" cy="104" r="3.5" fill="#3B82F6" opacity="0.85"/>
+      <circle cx="460" cy="118" r="3.5" fill="#10B981" opacity="0.85"/>
+      <circle cx="474" cy="118" r="3.5" fill="#06B6D4" opacity="0.85"/>
+      <circle cx="488" cy="118" r="3.5" fill="#F59E0B" opacity="0.85"/>
+      <circle cx="502" cy="118" r="3.5" fill="#EF4444" opacity="0.85"/>
+      <circle cx="516" cy="118" r="3.5" fill="#10B981" opacity="0.85"/>
+      <circle cx="460" cy="132" r="3.5" fill="#F59E0B" opacity="0.45"/>
+      <circle cx="474" cy="132" r="3.5" fill="#EF4444" opacity="0.45"/>
+      <circle cx="488" cy="132" r="3.5" fill="#8B5CF6" opacity="0.45"/>
+      <line x1="444" y1="116" x2="423" y2="116" stroke="#1e2035" stroke-width="4"/>
+      <!-- Catering zone marker -->
+      <rect x="8" y="70" width="36" height="120" rx="2" fill="rgba(139,92,246,0.05)" stroke="rgba(139,92,246,0.2)" stroke-width="0.75" stroke-dasharray="4,3"/>
+      <!-- HUD: AI Dispatch status -->
+      <rect x="8" y="232" width="145" height="40" rx="3" fill="rgba(30,30,46,0.92)" stroke="rgba(56,189,248,0.15)" stroke-width="1"/>
+      <circle cx="23" cy="252" r="4" fill="#00ff41">
+        <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="23" cy="252" r="8" fill="#00ff41" opacity="0.08">
+        <animate attributeName="r" values="5;10;5" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.1;0;0.1" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <text x="34" y="248" fill="#38BDF8" font-size="7" font-family="JetBrains Mono,monospace" font-weight="700">AI DISPATCH</text>
+      <text x="34" y="259" fill="#999077" font-size="6" font-family="JetBrains Mono,monospace">ACTIVE · KJFK T4</text>
+      <!-- HUD: KPI strip -->
+      <rect x="163" y="232" width="212" height="40" rx="3" fill="rgba(30,30,46,0.92)" stroke="rgba(77,70,50,0.15)" stroke-width="1"/>
+      <text x="175" y="244" fill="#999077" font-size="5.5" font-family="JetBrains Mono,monospace" font-weight="700">ACTIVE VEH</text>
+      <text x="175" y="258" fill="#fff5dc" font-size="13" font-family="JetBrains Mono,monospace" font-weight="700">12</text>
+      <line x1="218" y1="238" x2="218" y2="264" stroke="rgba(77,70,50,0.3)" stroke-width="1"/>
+      <text x="228" y="244" fill="#999077" font-size="5.5" font-family="JetBrains Mono,monospace" font-weight="700">TURNAROUND</text>
+      <text x="228" y="258" fill="#FFD60A" font-size="13" font-family="JetBrains Mono,monospace" font-weight="700">18:32</text>
+      <line x1="290" y1="238" x2="290" y2="264" stroke="rgba(77,70,50,0.3)" stroke-width="1"/>
+      <text x="300" y="244" fill="#999077" font-size="5.5" font-family="JetBrains Mono,monospace" font-weight="700">VIOLATIONS</text>
+      <text x="300" y="258" fill="#a8ffa8" font-size="13" font-family="JetBrains Mono,monospace" font-weight="700">0</text>
+      <!-- Vignette -->
+      <rect width="560" height="360" fill="url(#vignette)"/>
+    </svg>
   </div>
 </header>
 
@@ -1244,10 +1601,95 @@ init();
 </script>
 
 </section><!-- /#simulation -->
+
+<!-- ── Features ── -->
+<section id="features">
+  <div class="section-eyebrow">What You're Managing</div>
+  <h2 class="section-title">Airport ground ops,<br><span class="accent">simulated in your browser.</span></h2>
+  <div class="features-grid">
+    <div class="feature-card" style="--card-accent:var(--lp-yellow)">
+      <span class="feature-icon">🤖</span>
+      <div class="feature-card-title">AI Dispatch Engine</div>
+      <p class="feature-card-desc">Autonomous vehicle assignment every 8 seconds. Constraint solving balances gate load, proximity, and runway safety in real time.</p>
+    </div>
+    <div class="feature-card" style="--card-accent:var(--lp-blue)">
+      <span class="feature-icon">📡</span>
+      <div class="feature-card-title">Live ASDE-X Radar</div>
+      <p class="feature-card-desc">Full surface radar showing every vehicle and aircraft. Click any object on the radar to inspect its driver, task, speed, and transponder status.</p>
+    </div>
+    <div class="feature-card" style="--card-accent:#10B981">
+      <span class="feature-icon">✈</span>
+      <div class="feature-card-title">5 Airlines, 8 Gates</div>
+      <p class="feature-card-desc">American, United, Delta, Southwest, and JetBlue rotate through 8 active gates. Continuous inbound flight queue — no two dispatches the same.</p>
+    </div>
+    <div class="feature-card" style="--card-accent:#F59E0B">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-card-title">Runway Safety System</div>
+      <p class="feature-card-desc">Real-time incursion prevention. Ground vehicles auto-hold when aircraft are on approach. Emergency alerts at 90s and 30s windows.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── How to Play ── -->
+<section id="how-to-play">
+  <div class="section-eyebrow">How It Works</div>
+  <h2 class="section-title">Zero learning curve.<br>Deep enough to obsess over.</h2>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-number">01</div>
+      <div class="step-title">Click Play Now</div>
+      <p class="step-desc">No download, no install, no account. The simulation runs instantly in your browser with the Canvas 2D API — zero external dependencies.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-number">02</div>
+      <div class="step-title">Watch the AI Dispatch</div>
+      <p class="step-desc">Every 8 seconds, the AI assigns fuel trucks, baggage tugs, catering lifts, and pushback tractors to incoming aircraft automatically.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-number">03</div>
+      <div class="step-title">Inspect Vehicles</div>
+      <p class="step-desc">Click any vehicle or aircraft on the radar surface to pull its full data block — driver, task, gate, heading, and service history.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-number">04</div>
+      <div class="step-title">Track Your KPIs</div>
+      <p class="step-desc">Monitor turnaround times, runway violations, and fleet utilization in the live KPI bar. How efficient is your airport?</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<section id="faq">
+  <div class="section-eyebrow">Questions</div>
+  <h2 class="section-title">Frequently asked.</h2>
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q">What are AI airport ground operations?</div>
+      <p class="faq-a">AI airport ground operations use machine learning to automate and optimize ramp activities including vehicle dispatch, gate assignments, fueling routes, and baggage handling. GroundControl AI simulates this in real time, showing how AI reduces aircraft turnaround times and prevents runway incursions.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">How does airport dispatch optimization work?</div>
+      <p class="faq-a">Airport dispatch optimization uses algorithms to assign ground support vehicles — tugs, fuel trucks, catering units — to arriving and departing aircraft based on proximity, task priority, gate load, and runway safety state. GroundControl AI demonstrates this with a live simulation that processes inbound flight queues and issues optimized dispatch orders in real time.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What is a ground handling simulation?</div>
+      <p class="faq-a">A ground handling simulation models the full lifecycle of aircraft servicing between landing and takeoff — including vehicle routing, crew coordination, fueling, catering, and pushback. GroundControl AI provides a browser-based radar simulation with 18+ vehicle types, live dispatch logs, and a Runway Safety System panel.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Can AI reduce airport turnaround times?</div>
+      <p class="faq-a">Yes. By optimizing ground vehicle dispatch and minimizing idle time, AI systems can reduce aircraft gate turnaround times by 10–25%. GroundControl AI visualizes this optimization in a real-time simulation.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Is this free to play?</div>
+      <p class="faq-a">Completely free. No account, no download, no ads. GroundControl AI runs entirely in your browser as a single HTML file with zero external dependencies.</p>
+    </div>
+  </div>
+</section>
+
 </main>
 
 <footer id="site-footer">
-  <span class="footer-brand">GROUNDCONTROL AI — Built by Will DiMaio</span>
+  <span class="footer-brand">GroundControl AI — Built by Will DiMaio</span>
   <nav class="footer-links">
     <a href="/terms.html">Terms of Service</a>
     <a href="/privacy.html">Privacy Policy</a>
