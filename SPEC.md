@@ -285,4 +285,85 @@ each tick:
 | `sim/main.py` | Entry point, simulation loop |
 | `tests/` | pytest tests |
 | `schedule.json` | Sample 12-flight 2-hour schedule |
-| `requirements.txt` | pygame, networkx, pytest |
+| `requirements.txt` | pygame, networkx, pytest, gymnasium, sb3-contrib |
+
+---
+
+## Session 2 — Gymnasium RL Environment
+
+### Overview
+
+The `env/` package wraps the Session 1 simulator in a `gymnasium.Env` subclass
+for reinforcement learning. Core sim logic is **not modified**; the env calls
+into it via a thin override.
+
+### Architecture
+
+```
+AirportEnv
+  └── RLDispatcher (subclass of Dispatcher)
+        └── _assign_vehicles() → no-op
+              (env feeds one action = one vehicle assignment per step)
+```
+
+`RLDispatcher` inherits all dispatcher logic (gate assignment, taxiing, runway
+rules, service completion) except `_assign_vehicles`, which becomes a no-op.
+The env calls `_assign_one_task(action)` to apply the agent's choice, then
+advances the sim until the next **decision point**.
+
+### Decision Point
+
+A decision point exists when:
+- At least one `ServiceTask` is in `dispatcher.pending_tasks`, AND
+- At least one free vehicle of a compatible type exists (checked via
+  `_find_nearest_vehicle()`).
+
+The sim ticks (dt=1s each) until a decision point, episode end, or the
+`MAX_TICKS_PER_STEP` safety cap (3600 ticks) is hit.
+
+### Observation Space
+
+`Box(low=-1, high=1, shape=(270,), dtype=float32)`
+
+| Slice | Entity | Fields |
+|-------|--------|--------|
+| [0] | sim | `sim_time / SIM_HORIZON` |
+| [1..160] | 20 aircraft slots × 8 features | state_norm, pos_idx_norm, time_to_dep_norm, fuel_done, baggage_unload_done, baggage_load_done, pushback_done, is_active |
+| [161..188] | 7 vehicle slots × 4 features | state_norm, pos_idx_norm, type_norm, is_free |
+| [189..268] | 16 task slots × 5 features | svc_type_norm, gate_idx_norm, age_norm, flight_slot_norm, is_active |
+| [269] | pending queue | `n_pending / MAX_TASKS` |
+
+Position encoding uses a fixed 15-node index (`ALL_NODES` in `airport_env.py`).
+All values clamped to [-1, 1].
+
+### Action Space
+
+`Discrete(17)` — actions 0..15 select a pending task to assign; action 16 = HOLD.
+
+Action masking via `action_masks()` returns a `bool[17]` array compatible with
+`sb3_contrib.MaskablePPO`. Action `i` is valid iff:
+1. `i < len(pending_tasks)`, AND
+2. A free compatible vehicle exists for `pending_tasks[i]`.
+
+HOLD (action 16) is always valid.
+
+### Reward
+
+| Event | Reward |
+|-------|--------|
+| Each sim-tick | `−1.0 × new_delay_minutes` (per overdue flight-minute) |
+| On-time departure (≤5 min late) | `+10.0` |
+| Late departure (>5 min late) | `+2.0` |
+| Hold when valid assignment exists | `−0.1` |
+| Conflict detected | `−50.0` |
+| Episode truncated — per pending flight | `−20.0` |
+
+### Files Added
+
+| File | Purpose |
+|------|---------|
+| `env/__init__.py` | Public API: `AirportEnv`, `ACTION_HOLD` |
+| `env/airport_env.py` | `gymnasium.Env` subclass + `RLDispatcher` |
+| `env/random_schedule.py` | Randomised schedule generator (seed-reproducible) |
+| `env/smoke_test.py` | Quick manual sanity check (`python -m env.smoke_test`) |
+| `tests/test_env.py` | pytest suite: shapes, bounds, zero-conflict, termination |
