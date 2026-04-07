@@ -1,0 +1,151 @@
+"""
+train_ppo.py — Train a MaskablePPO agent on the AirportEnv.
+
+Usage:
+    python -m train.train_ppo                      # 1M steps, default config
+    python -m train.train_ppo --timesteps 500000   # custom total steps
+    python -m train.train_ppo --resume checkpoints/airport_ppo_500000_steps
+
+Configuration (hard-coded per spec):
+    n_envs       = 8
+    learning_rate = 3e-4
+    batch_size   = 256
+    n_steps      = 2048  (per env per rollout)
+    n_epochs     = 10
+    gamma        = 0.99
+    clip_range   = 0.2
+    ent_coef     = 0.01
+    total_timesteps = 1_000_000
+
+Outputs:
+    checkpoints/airport_ppo_{N}_steps.zip    every 50k steps
+    checkpoints/airport_ppo_final.zip        at end of training
+    runs/AirportPPO_*/                       TensorBoard logs
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
+from sb3_contrib import MaskablePPO
+
+from env.airport_env import AirportEnv
+from train.callbacks import AirportEvalCallback
+
+# ── Config ────────────────────────────────────────────────────────────────────
+
+N_ENVS             = 8
+LEARNING_RATE      = 3e-4
+BATCH_SIZE         = 256
+N_STEPS            = 2048
+N_EPOCHS           = 10
+GAMMA              = 0.99
+CLIP_RANGE         = 0.2
+ENT_COEF           = 0.01
+TOTAL_TIMESTEPS    = 1_000_000
+CHECKPOINT_FREQ    = 50_000     # save checkpoint every N timesteps (total, all envs)
+EVAL_FREQ          = 50_000     # evaluate vs FCFS every N timesteps
+EVAL_SEED          = 42
+
+CHECKPOINT_DIR     = "checkpoints"
+TENSORBOARD_LOG    = "runs"
+
+
+# ── Env factory ───────────────────────────────────────────────────────────────
+
+def _make_env(rank: int):
+    """Return a thunk that creates a randomised AirportEnv for subprocess."""
+    def _init():
+        env = AirportEnv(randomise=True, seed=rank)
+        env.reset(seed=rank)
+        return env
+    return _init
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Train MaskablePPO on AirportEnv")
+    parser.add_argument(
+        "--timesteps", type=int, default=TOTAL_TIMESTEPS,
+        help="Total training timesteps (default: 1_000_000)",
+    )
+    parser.add_argument(
+        "--resume", type=str, default=None,
+        help="Path to a checkpoint zip to resume from",
+    )
+    parser.add_argument(
+        "--n-envs", type=int, default=N_ENVS,
+        help="Number of parallel envs (default: 8)",
+    )
+    args = parser.parse_args()
+
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    os.makedirs(TENSORBOARD_LOG, exist_ok=True)
+
+    # ── Build vectorised env ─────────────────────────────────────────────────
+    vec_env = SubprocVecEnv([_make_env(i) for i in range(args.n_envs)])
+
+    # ── Build or load model ──────────────────────────────────────────────────
+    if args.resume:
+        print(f"Resuming from checkpoint: {args.resume}")
+        model = MaskablePPO.load(
+            args.resume,
+            env=vec_env,
+            tensorboard_log=TENSORBOARD_LOG,
+        )
+    else:
+        model = MaskablePPO(
+            policy="MlpPolicy",
+            env=vec_env,
+            learning_rate=LEARNING_RATE,
+            batch_size=BATCH_SIZE,
+            n_steps=N_STEPS,
+            n_epochs=N_EPOCHS,
+            gamma=GAMMA,
+            clip_range=CLIP_RANGE,
+            ent_coef=ENT_COEF,
+            verbose=1,
+            tensorboard_log=TENSORBOARD_LOG,
+        )
+
+    # ── Callbacks ────────────────────────────────────────────────────────────
+    checkpoint_cb = CheckpointCallback(
+        save_freq=max(1, CHECKPOINT_FREQ // args.n_envs),  # per-env freq
+        save_path=CHECKPOINT_DIR,
+        name_prefix="airport_ppo",
+        verbose=1,
+    )
+    eval_cb = AirportEvalCallback(
+        eval_freq=EVAL_FREQ,
+        eval_seed=EVAL_SEED,
+        verbose=1,
+    )
+    callbacks = CallbackList([checkpoint_cb, eval_cb])
+
+    # ── Train ────────────────────────────────────────────────────────────────
+    print(
+        f"\nTraining MaskablePPO — {args.timesteps:,} steps | "
+        f"{args.n_envs} envs | checkpoints → {CHECKPOINT_DIR}/ | "
+        f"TensorBoard → {TENSORBOARD_LOG}/\n"
+    )
+    model.learn(
+        total_timesteps=args.timesteps,
+        callback=callbacks,
+        tb_log_name="AirportPPO",
+        reset_num_timesteps=(args.resume is None),
+    )
+
+    final_path = os.path.join(CHECKPOINT_DIR, "airport_ppo_final")
+    model.save(final_path)
+    print(f"\nTraining complete. Final model saved to {final_path}.zip")
+
+    vec_env.close()
+
+
+if __name__ == "__main__":
+    main()

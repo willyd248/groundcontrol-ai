@@ -367,3 +367,91 @@ HOLD (action 16) is always valid.
 | `env/random_schedule.py` | Randomised schedule generator (seed-reproducible) |
 | `env/smoke_test.py` | Quick manual sanity check (`python -m env.smoke_test`) |
 | `tests/test_env.py` | pytest suite: shapes, bounds, zero-conflict, termination |
+
+---
+
+## Session 3 — PPO Training Infrastructure
+
+### Overview
+
+Adds the full training pipeline on top of the Session 2 Gymnasium environment.
+Uses `sb3_contrib.MaskablePPO` so the agent always receives a valid action mask
+and cannot select an illegal task or a task with no available vehicle.
+
+### Architecture
+
+```
+train/train_ppo.py
+  └── SubprocVecEnv(8 × AirportEnv(randomise=True))
+        └── MaskablePPO  (policy=MlpPolicy)
+              ├── CheckpointCallback  → checkpoints/airport_ppo_{N}_steps.zip
+              └── AirportEvalCallback → runs/AirportPPO_*/
+                    ├── run_policy_episode(model, seed=42)   (RL)
+                    └── run_fcfs_episode(seed=42)            (FCFS baseline, cached)
+```
+
+### Hyperparameters
+
+| Parameter | Value |
+|-----------|-------|
+| `n_envs` | 8 (SubprocVecEnv) |
+| `learning_rate` | 3e-4 |
+| `batch_size` | 256 |
+| `n_steps` | 2048 (per env per rollout) |
+| `n_epochs` | 10 |
+| `gamma` | 0.99 |
+| `clip_range` | 0.2 |
+| `ent_coef` | 0.01 |
+| `total_timesteps` | 1,000,000 |
+
+### Evaluation Callback
+
+`AirportEvalCallback` fires every 50 k total timesteps and:
+1. Runs the current policy deterministically on seed-42 random schedule.
+2. Compares against the FCFS baseline (computed once at training start, cached).
+3. Logs to TensorBoard: `eval/rl_total_delay_min`, `eval/fcfs_total_delay_min`,
+   `eval/delay_improvement`, `eval/rl_conflict_count`, `eval/rl_missed_departures`, etc.
+
+**Debug trigger:** if `delay_improvement < 0` at step ≥ 200 k, the callback prints
+a warning to investigate the reward signal or observation space rather than
+training longer.
+
+### FCFS Baseline (seed=42)
+
+Measured at training start:
+- Total delay: **14.5 min**
+- Missed departures: **0**
+- Conflicts: **0**
+
+The RL agent should beat or match this by step 200 k. If not, debug reward shaping
+before extending training.
+
+### Usage
+
+```bash
+# Full 1M-step training
+python -m train.train_ppo
+
+# Short sanity check
+python -m train.train_ppo --timesteps 10000 --n-envs 2
+
+# Resume from checkpoint
+python -m train.train_ppo --resume checkpoints/airport_ppo_500000_steps
+
+# Evaluate a checkpoint
+python -m train.eval checkpoints/airport_ppo_final.zip --compare-fcfs
+python -m train.eval checkpoints/airport_ppo_final.zip --render --seed 99
+
+# TensorBoard
+tensorboard --logdir runs/
+```
+
+### Files Added
+
+| File | Purpose |
+|------|---------|
+| `train/__init__.py` | Package init |
+| `train/train_ppo.py` | MaskablePPO training entry point |
+| `train/callbacks.py` | `AirportEvalCallback` + FCFS/policy episode runners |
+| `train/eval.py` | Standalone checkpoint evaluation script |
+| `checkpoints/` | Saved model checkpoints (every 50 k steps) |
