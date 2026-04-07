@@ -13,9 +13,17 @@ Tests:
   6. Episode terminates within SIM_HORIZON.
   7. Reward is finite (no NaN/Inf).
   8. Mask and action_space.n agree.
+  9. (event-trigger) decisions per episode within sane range after fix.
+  10. (event-trigger) mask consistency: non-HOLD actions ↔ _has_decision_point().
+  11. (event-trigger) each step advances sim time; batching confirmed.
+  12. (event-trigger) safety valve emits RuntimeWarning after 600 idle ticks.
+  13. (event-trigger) Event C fires when all compatible vehicles break mid-advance.
 """
 
 from __future__ import annotations
+
+import json
+import warnings
 
 import numpy as np
 import pytest
@@ -23,6 +31,15 @@ import pytest
 from env.airport_env import (
     AirportEnv, OBS_DIM, ACTION_HOLD, MAX_TASKS,
 )
+
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+def _write_schedule(tmp_path, flights: list[dict]) -> str:
+    """Write a schedule JSON to a temp file and return the path."""
+    p = tmp_path / "schedule.json"
+    p.write_text(json.dumps(flights))
+    return str(p)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -221,5 +238,191 @@ class TestMaskValidity:
             _, _, terminated, truncated, _ = env.step(action)
             if terminated or truncated:
                 env.reset()
+
+        env.close()
+
+
+# ── Event-trigger tests (Step 2) ──────────────────────────────────────────────
+
+class TestEventTrigger:
+    """
+    Verify the event-based decision trigger introduced in Step 2.
+
+    The old trigger fired on every tick where pending_task + free_vehicle existed,
+    producing ~9000 queries per episode.  The new trigger fires only when something
+    meaningfully changes (Event A/B/C), reducing queries to O(tasks-per-episode).
+    """
+
+    def test_decisions_per_episode_in_sane_range(self):
+        """Full episode with random valid policy: 30–400 total decisions (not ~9000)."""
+        env = AirportEnv(randomise=True, seed=0)
+        rng = np.random.default_rng(0)
+
+        obs, info = env.reset(seed=0)
+        steps = 0
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            for _ in range(600):          # hard cap well above expected
+                mask   = env.action_masks()
+                action = int(rng.choice(np.where(mask)[0]))
+                _, _, terminated, truncated, _ = env.step(action)
+                steps += 1
+                if terminated or truncated:
+                    break
+
+        env.close()
+        assert 30 <= steps <= 400, (
+            f"Expected 30–400 decisions per episode, got {steps}. "
+            f"Old trigger produced ~9000; if this is high the trigger is still broken."
+        )
+
+    def test_no_query_without_legal_action(self):
+        """
+        Mask consistency: non-HOLD slots are True iff _has_decision_point() is True.
+        Ensures the env never presents misleading mask state to the agent.
+        """
+        env = AirportEnv(schedule_path="schedule.json")
+        rng = np.random.default_rng(42)
+        env.reset()
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            for _ in range(200):
+                mask     = env.action_masks()
+                has_work = mask[:ACTION_HOLD].any()
+                # Mask must agree with _has_decision_point()
+                assert has_work == env._has_decision_point(), (
+                    f"Mask says has_work={has_work} but "
+                    f"_has_decision_point()={env._has_decision_point()}"
+                )
+                action = random_valid_action(env, rng)
+                _, _, terminated, truncated, _ = env.step(action)
+                if terminated or truncated:
+                    break
+
+        env.close()
+
+    def test_event_batching(self, tmp_path):
+        """
+        Each step() advances sim time by ≥1 tick.
+        Total sim advance >> step count confirms events are batched, not one-tick-per-query.
+        """
+        env = AirportEnv(schedule_path="schedule.json")
+        rng = np.random.default_rng(1)
+        env.reset()
+
+        sim_times = []
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            for _ in range(80):
+                prev_t = env._sim_time
+                mask   = env.action_masks()
+                action = int(rng.choice(np.where(mask)[0]))
+                _, _, terminated, truncated, _ = env.step(action)
+                sim_times.append(env._sim_time - prev_t)
+                if terminated or truncated:
+                    break
+
+        env.close()
+
+        # Every step must advance time by at least 1 sim-second
+        assert all(dt >= 1.0 for dt in sim_times), (
+            "A step advanced 0 sim-seconds — event-based loop is not ticking."
+        )
+
+        # Average advance per step should be well above 1 s
+        # (old trigger: ~1 s/step because it re-queried every tick)
+        avg_advance = float(np.mean(sim_times)) if sim_times else 0.0
+        assert avg_advance >= 10.0, (
+            f"Average sim advance per step: {avg_advance:.1f}s "
+            f"(expected ≥10s with event-based trigger; ~1s indicates regression to old trigger)"
+        )
+
+    def test_safety_valve_fires(self, tmp_path):
+        """
+        Holding with pending tasks + free vehicles for 600 ticks emits RuntimeWarning.
+        Uses a single-aircraft schedule so no second arrival event can fire
+        during the 600-tick window after the first decision point.
+        """
+        # Single arriving aircraft: lands at t=0, gets gate, creates service tasks.
+        # After reset() returns (first decision point), a HOLD leaves tasks + free
+        # vehicles unchanged for 600 ticks — no Event A, B, or C fires.
+        sched_path = _write_schedule(tmp_path, [{
+            "flight_id": "VALVE001",
+            "aircraft_type": "CRJ900",
+            "scheduled_arrival": 0,
+            "scheduled_departure": 99999,   # far future — no pushback trigger
+            "is_departure_only": False,
+            "is_arrival_only": False,
+        }])
+
+        env = AirportEnv(schedule_path=sched_path)
+        env.reset()
+
+        assert env._has_decision_point(), (
+            "Expected pending service tasks after single-aircraft reset."
+        )
+
+        # HOLD: same tasks + free vehicles, nothing changes for 600 ticks → valve fires
+        with pytest.warns(RuntimeWarning, match="No decision event in 600 ticks"):
+            env.step(ACTION_HOLD)
+
+        env.close()
+
+    def test_disruption_event_c(self, tmp_path, monkeypatch):
+        """
+        When all compatible vehicles become unavailable mid-advance (Event C),
+        the env queries the agent after exactly 1 tick (not after 600 ticks).
+        After the query, only HOLD is valid.
+        """
+        from sim.entities import VehicleState
+
+        sched_path = _write_schedule(tmp_path, [{
+            "flight_id": "EVT001",
+            "aircraft_type": "CRJ900",
+            "scheduled_arrival": 0,
+            "scheduled_departure": 99999,
+            "is_departure_only": False,
+            "is_arrival_only": False,
+        }])
+
+        env = AirportEnv(schedule_path=sched_path)
+        env.reset()
+
+        assert env._has_decision_point(), (
+            "Need a decision point before testing Event C."
+        )
+
+        # Wrap dispatcher.tick() to break ALL available vehicles on the first tick
+        tick_count = [0]
+        original_tick = env.dispatcher.tick
+
+        def injecting_tick(now, dt=1.0):
+            tick_count[0] += 1
+            original_tick(now, dt)
+            if tick_count[0] == 1:
+                # Simulate: all free vehicles suddenly unavailable (breakdown)
+                for v in env.dispatcher.vehicles.values():
+                    if v.is_available():
+                        v.state       = VehicleState.RETURNING
+                        v.assigned_to = "__BREAKDOWN__"
+
+        monkeypatch.setattr(env.dispatcher, "tick", injecting_tick)
+
+        # HOLD: _advance_to_decision() must detect Event C and return after 1 tick
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            env.step(ACTION_HOLD)
+
+        assert tick_count[0] == 1, (
+            f"Event C should fire after exactly 1 tick; ran {tick_count[0]} ticks. "
+            f"If this is 600, Event C detection is not working."
+        )
+
+        # After Event C: no legal non-HOLD actions (no compatible vehicles)
+        assert not env.action_masks()[:ACTION_HOLD].any(), (
+            "Expected all non-HOLD actions masked out after all vehicles broken."
+        )
 
         env.close()

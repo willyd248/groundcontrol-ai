@@ -347,15 +347,41 @@ class AirportEnv(gym.Env):
 
     def _advance_to_decision(self) -> float:
         """
-        Tick the sim (dt=1 each tick) until:
-          • a pending task + free vehicle exists  (decision point), or
-          • all flights departed, or
-          • sim_time ≥ SIM_HORIZON, or
-          • MAX_TICKS_PER_STEP ticks elapsed (safety cap).
+        Tick the sim (dt=1 each tick) until a genuine scheduling event fires,
+        then return exactly one query to the agent.
+
+        Event-based trigger (fires only when something meaningfully changed):
+          Event A — a vehicle transitions to IDLE this tick AND at least one
+                    pending task has a compatible free vehicle.
+          Event B — new task(s) entered pending_tasks this tick AND a compatible
+                    free vehicle exists.
+          Event C — assignment was possible before this tick but is not after
+                    (captures vehicle breakdowns and any other resource removal).
+          Safety valve — 600 ticks with no event and _has_decision_point() True:
+                    emit RuntimeWarning and force a query to prevent silent hangs.
+
+        All events that fire in the same tick collapse into exactly one query;
+        the observation returned already reflects all simultaneous state changes.
+
+        Also handles:
+          • all flights departed — break normally.
+          • sim_time ≥ SIM_HORIZON — break (truncation handled in step()).
+          • MAX_TICKS_PER_STEP ticks — hard safety cap.
+
         Returns total reward accumulated during these ticks.
         """
+        import warnings
+
         reward = 0.0
         ticks  = 0
+
+        # ── Snapshots for event detection ─────────────────────────────────────
+        prev_vehicle_states: dict[str, VehicleState] = {
+            vid: v.state for vid, v in self.dispatcher.vehicles.items()
+        }
+        prev_pending_count: int = len(self.dispatcher.pending_tasks)
+        # Event C: was a legal assignment possible before this tick?
+        had_decision_before: bool = self._has_decision_point()
 
         while self._sim_time < SIM_HORIZON:
             self.dispatcher.tick(self._sim_time, dt=1.0)
@@ -376,11 +402,58 @@ class AirportEnv(gym.Env):
                    for a in self.dispatcher.aircraft.values()):
                 break
 
-            # Decision point reached?
-            if self._has_decision_point():
+            # ── Event detection ────────────────────────────────────────────────
+
+            # Event A: any vehicle transitioned to IDLE this tick
+            vehicle_freed: bool = any(
+                prev_vehicle_states.get(vid) != VehicleState.IDLE
+                and v.state == VehicleState.IDLE
+                for vid, v in self.dispatcher.vehicles.items()
+            )
+
+            # Event B: new tasks arrived in pending queue this tick
+            new_tasks_arrived: bool = (
+                len(self.dispatcher.pending_tasks) > prev_pending_count
+            )
+
+            # Event C: assignment was possible before tick, impossible after
+            # Covers vehicle breakdown and any mid-episode resource removal.
+            now_has_decision: bool = self._has_decision_point()
+            resources_reduced: bool = had_decision_before and not now_has_decision
+
+            # Update snapshots for next tick
+            prev_vehicle_states = {
+                vid: v.state for vid, v in self.dispatcher.vehicles.items()
+            }
+            prev_pending_count  = len(self.dispatcher.pending_tasks)
+            had_decision_before = now_has_decision
+
+            # ── Trigger query ──────────────────────────────────────────────────
+            # Event C: resources reduced — query even with no valid assignments
+            # so the agent observes the change (mask will show HOLD only).
+            if resources_reduced:
                 break
 
-            # Safety cap — return even if no decision point
+            # Events A / B: something new became assignable
+            if (vehicle_freed or new_tasks_arrived) and now_has_decision:
+                break
+
+            # ── Safety valve: 600-tick inactivity guard ────────────────────────
+            # Should never fire in correct operation. Signals a missed event type.
+            if ticks == 600 and now_has_decision:
+                warnings.warn(
+                    f"[AirportEnv] No decision event in {ticks} ticks "
+                    f"(sim_time={self._sim_time:.0f}s). "
+                    f"Pending: {len(self.dispatcher.pending_tasks)} task(s), "
+                    f"free vehicles: "
+                    f"{sum(1 for v in self.dispatcher.vehicles.values() if v.is_available())}. "
+                    f"Forcing query to prevent hang.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                break
+
+            # Hard safety cap — return even with no decision point
             if ticks >= MAX_TICKS_PER_STEP:
                 break
 
