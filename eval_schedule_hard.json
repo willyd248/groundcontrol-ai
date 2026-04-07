@@ -1,0 +1,229 @@
+{
+  "seed": 1013,
+  "n_flights": 13,
+  "choice_ticks_2plus": 15,
+  "fcfs_delay_minutes": 29.3,
+  "flights": [
+    {
+      "flight_id": "RND01",
+      "aircraft_type": "A320",
+      "scheduled_arrival": 261.0,
+      "scheduled_departure": 3016.0,
+      "state": "APPROACHING",
+      "assigned_gate": null,
+      "position": null,
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 4500.0,
+        "needs_baggage_unload": true,
+        "needs_baggage_load": true,
+        "baggage_count": 110,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND02",
+      "aircraft_type": "B737",
+      "scheduled_arrival": 1448.0,
+      "scheduled_departure": 4677.0,
+      "state": "APPROACHING",
+      "assigned_gate": null,
+      "position": null,
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 5000.0,
+        "needs_baggage_unload": true,
+        "needs_baggage_load": true,
+        "baggage_count": 120,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND05",
+      "aircraft_type": "A320",
+      "scheduled_arrival": 1850.0,
+      "scheduled_departure": 5274.0,
+      "state": "APPROACHING",
+      "assigned_gate": null,
+      "position": null,
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 4500.0,
+        "needs_baggage_unload": true,
+        "needs_baggage_load": true,
+        "baggage_count": 110,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND07",
+      "aircraft_type": "B737",
+      "scheduled_arrival": 2915.0,
+      "scheduled_departure": 6388.0,
+      "state": "APPROACHING",
+      "assigned_gate": null,
+      "position": null,
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 5000.0,
+        "needs_baggage_unload": true,
+        "needs_baggage_load": true,
+        "baggage_count": 120,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND09",
+      "aircraft_type": "B777",
+      "scheduled_arrival": 4301.0,
+      "scheduled_departure": 9694.0,
+      "state": "APPROACHING",
+      "assigned_gate": null,
+      "position": null,
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 12000.0,
+        "needs_baggage_unload": true,
+        "needs_baggage_load": true,
+        "baggage_count": 300,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND10",
+      "aircraft_type": "B777",
+      "scheduled_arrival": 4749.0,
+      "scheduled_departure": 9933.0,
+      "state": "APPROACHING",
+      "assigned_gate": null,
+      "position": null,
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 12000.0,
+        "needs_baggage_unload": true,
+        "needs_baggage_load": true,
+        "baggage_count": 300,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND11",
+      "aircraft_type": "B777",
+      "scheduled_arrival": 6178.0,
+      "scheduled_departure": 10692.0,
+      "state": "APPROACHING",
+      "assigned_gate": null,
+      "position": null,
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 12000.0,
+        "needs_baggage_unload": true,
+        "needs_baggage_load": true,
+        "baggage_count": 300,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND12",
+      "aircraft_type": "B737",
+      "scheduled_arrival": 7654.0,
+      "scheduled_departure": 10921.0,
+      "state": "APPROACHING",
+      "assigned_gate": null,
+      "position": null,
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 5000.0,
+        "needs_baggage_unload": true,
+        "needs_baggage_load": true,
+        "baggage_count": 120,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND13",
+      "aircraft_type": "CRJ900",
+      "scheduled_arrival": 8894.0,
+      "scheduled_departure": 11884.0,
+      "state": "APPROACHING",
+      "assigned_gate": null,
+      "position": null,
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 2000.0,
+        "needs_baggage_unload": true,
+        "needs_baggage_load": true,
+        "baggage_count": 60,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND06",
+      "aircraft_type": "A320",
+      "scheduled_arrival": null,
+      "scheduled_departure": 4225.0,
+      "state": "AT_GATE",
+      "assigned_gate": "B1",
+      "position": "GATE_B1",
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 4500.0,
+        "needs_baggage_unload": false,
+        "needs_baggage_load": true,
+        "baggage_count": 110,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND04",
+      "aircraft_type": "B777",
+      "scheduled_arrival": null,
+      "scheduled_departure": 5946.0,
+      "state": "AT_GATE",
+      "assigned_gate": "A3",
+      "position": "GATE_A3",
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 12000.0,
+        "needs_baggage_unload": false,
+        "needs_baggage_load": true,
+        "baggage_count": 300,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND08",
+      "aircraft_type": "A320",
+      "scheduled_arrival": null,
+      "scheduled_departure": 6628.0,
+      "state": "AT_GATE",
+      "assigned_gate": "A3",
+      "position": "GATE_A3",
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 4500.0,
+        "needs_baggage_unload": false,
+        "needs_baggage_load": true,
+        "baggage_count": 110,
+        "needs_pushback": true
+      }
+    },
+    {
+      "flight_id": "RND03",
+      "aircraft_type": "B777",
+      "scheduled_arrival": null,
+      "scheduled_departure": 9108.0,
+      "state": "AT_GATE",
+      "assigned_gate": "B3",
+      "position": "GATE_B3",
+      "service_requirements": {
+        "needs_fuel": true,
+        "fuel_amount": 12000.0,
+        "needs_baggage_unload": false,
+        "needs_baggage_load": true,
+        "baggage_count": 300,
+        "needs_pushback": true
+      }
+    }
+  ]
+}
