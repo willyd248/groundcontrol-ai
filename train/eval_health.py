@@ -179,8 +179,8 @@ def main() -> None:
     all_ent_non_hold = [e for ep in episodes for e in ep["entropies_non_hold"]]
 
     # Services hard-pass: sum across all episodes
-    services_started   = sum(ep.get("services_started", 0) for ep in episodes)
-    services_completed = sum(ep.get("services_completed", 0) for ep in episodes)
+    services_started   = sum(ep.get("tasks_started", 0) for ep in episodes)
+    services_completed = sum(ep.get("tasks_completed", 0) for ep in episodes)
     total_abandonments = sum(ep.get("abandonment_count", 0) for ep in episodes)
     conflict_eps       = sum(all_conflicts)
 

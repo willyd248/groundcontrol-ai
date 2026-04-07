@@ -59,6 +59,8 @@ class Dispatcher:
         self.conflict_count = 0
         self.vehicles_dispatched = 0
         self.fuel_truck_refills = 0
+        self.tasks_started = 0    # incremented when a task is dispatched to a vehicle
+        self.tasks_completed = 0  # incremented when a task finishes normally
 
         # Track segment entry times for separation enforcement
         # key: (flight_id_or_vehicle_id, u, v) → time entered
@@ -310,6 +312,7 @@ class Dispatcher:
             self.active_tasks[task.task_id] = task
             self.pending_tasks.remove(task)
             self.vehicles_dispatched += 1
+            self.tasks_started += 1
 
     def _find_nearest_vehicle(self, service_type: str, gate_node: str) -> Vehicle | None:
         candidates = []
@@ -420,6 +423,7 @@ class Dispatcher:
                 task.completed_at = now
                 ac.services_completed.add(task.service_type)
                 del self.active_tasks[task_id]
+                self.tasks_completed += 1
 
                 # Free vehicle
                 vehicle.state = VehicleState.IDLE
@@ -634,4 +638,6 @@ class Dispatcher:
             "conflict_count":          self.conflict_count,
             "vehicles_dispatched":     self.vehicles_dispatched,
             "fuel_truck_refills":      self.fuel_truck_refills,
+            "tasks_started":           self.tasks_started,
+            "tasks_completed":         self.tasks_completed,
         }

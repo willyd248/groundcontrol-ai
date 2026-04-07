@@ -351,6 +351,7 @@ class AirportEnv(gym.Env):
         self.dispatcher.active_tasks[task.task_id] = task
         self.dispatcher.pending_tasks.remove(task)
         self.dispatcher.vehicles_dispatched += 1
+        self.dispatcher.tasks_started += 1
 
     def _advance_to_decision(self) -> float:
         """
@@ -594,6 +595,8 @@ class AirportEnv(gym.Env):
 
     def _build_info(self) -> dict:
         m = self.dispatcher.metrics()
-        m["sim_time"]        = self._sim_time
-        m["n_pending_tasks"] = len(self.dispatcher.pending_tasks)
+        m["sim_time"]           = self._sim_time
+        m["n_pending_tasks"]    = len(self.dispatcher.pending_tasks)
+        m["conflict_terminated"] = self._conflict_terminated
+        m["abandonment_count"]  = len(self._abandoned_task_ids)
         return m
