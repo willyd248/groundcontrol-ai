@@ -30,20 +30,20 @@ Index  Field                        Encoding
   +5   baggage_load_done           1 if "baggage_load" in services_completed
   +6   pushback_done               1 if "pushback" in services_completed
   +7   is_active                   1 if slot contains a real aircraft, else 0
-[161..176]  vehicle slots (MAX_VEHICLES=4, VEH_FEATURES=4 each)
+[161..184]  vehicle slots (MAX_VEHICLES=6, VEH_FEATURES=4 each)
   +0   state_norm                  VehicleState ordinal / 3  ∈ [0, 1]
   +1   pos_idx_norm                node index / N_NODES  ∈ [0, 1]
   +2   type_norm                   0=fuel_truck, 1=baggage_tug, 2=pushback_tractor
                                    divided by 2  ∈ [0, 1]
   +3   is_free                     1 if vehicle.is_available()
-[177..256]  pending-task slots (MAX_TASKS=16, TASK_FEATURES=5 each)
+[185..264]  pending-task slots (MAX_TASKS=16, TASK_FEATURES=5 each)
   +0   svc_type_norm               service type ordinal / 3  ∈ [0, 1]
   +1   gate_idx_norm               gate-node index / N_NODES  ∈ [0, 1]
   +2   age_norm                    (now - created_at) / MAX_DEP_WINDOW  ∈ [0, 1]
   +3   flight_slot_norm            aircraft-slot index / MAX_AIRCRAFT  ∈ [0, 1]
   +4   is_active                   1 if slot contains a real task
-[257]  n_pending_norm              len(pending_tasks) / MAX_TASKS  ∈ [0, 1]
-Total: OBS_DIM = 258
+[265]  n_pending_norm              len(pending_tasks) / MAX_TASKS  ∈ [0, 1]
+Total: OBS_DIM = 266
 
 Action space  Discrete(MAX_TASKS + 1 = 17)
 ──────────────────────────────────────────
@@ -90,7 +90,7 @@ from sim.dispatcher import Dispatcher
 # ── Observation-space constants ───────────────────────────────────────────────
 
 MAX_AIRCRAFT   = 20    # upper bound on flights per episode
-MAX_VEHICLES   = 4     # fixed fleet (FT×1, BT×2, PB×1)
+MAX_VEHICLES   = 6     # fixed fleet (FT×2, BT×2, PB×2)
 MAX_TASKS      = 16    # pending-task slots visible in obs
 SIM_HORIZON    = 14400.0   # 4 hours; hard episode time limit (seconds)
 MAX_DEP_WINDOW = 3600.0    # normalisation window for time-to-departure
@@ -132,10 +132,10 @@ TASK_FEATURES = 5
 OBS_DIM = (
     1                            # sim_time_norm
     + MAX_AIRCRAFT * AC_FEATURES   # 160
-    + MAX_VEHICLES * VEH_FEATURES  # 16
+    + MAX_VEHICLES * VEH_FEATURES  # 24
     + MAX_TASKS    * TASK_FEATURES # 80
     + 1                            # n_pending_norm
-)  # = 258
+)  # = 266
 
 # ── Reward constants ──────────────────────────────────────────────────────────
 
@@ -171,9 +171,11 @@ class RLDispatcher(Dispatcher):
 def _build_fleet():
     return [
         FuelTruck(vehicle_id="FT1", position="DEPOT"),
+        FuelTruck(vehicle_id="FT2", position="DEPOT"),
         BaggageTug(vehicle_id="BT1", position="DEPOT"),
         BaggageTug(vehicle_id="BT2", position="DEPOT"),
         PushbackTractor(vehicle_id="PB1", position="DEPOT"),
+        PushbackTractor(vehicle_id="PB2", position="DEPOT"),
     ]
 
 
@@ -189,11 +191,13 @@ class AirportEnv(gym.Env):
         schedule_path: str = "schedule.json",
         randomise: bool = False,
         seed: Optional[int] = None,
+        density: str = "tight",
     ) -> None:
         super().__init__()
         self.schedule_path = schedule_path
         self.randomise     = randomise
         self._init_seed    = seed
+        self.density       = density
 
         self.observation_space = spaces.Box(
             low=-1.0, high=1.0, shape=(OBS_DIM,), dtype=np.float32
@@ -228,7 +232,11 @@ class AirportEnv(gym.Env):
         if self.randomise:
             from env.random_schedule import generate_schedule
             effective_seed = seed if seed is not None else self._init_seed
-            aircraft_list  = generate_schedule(seed=effective_seed)
+            aircraft_list  = generate_schedule(seed=effective_seed, density=self.density)
+            ft = sum(1 for v in fleet if v.vehicle_type == "fuel_truck")
+            bt = sum(1 for v in fleet if v.vehicle_type == "baggage_tug")
+            pb = sum(1 for v in fleet if v.vehicle_type == "pushback_tractor")
+            print(f"SCHEDULE_DENSITY: {self.density}, FLEET: FT={ft} BT={bt} PB={pb}, flights={len(aircraft_list)}")
         else:
             schedule_file = (options or {}).get("schedule", self.schedule_path)
             aircraft_list = load_schedule(schedule_file)
