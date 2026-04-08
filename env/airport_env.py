@@ -30,30 +30,47 @@ Index  Field                        Encoding
   +5   baggage_load_done           1 if "baggage_load" in services_completed
   +6   pushback_done               1 if "pushback" in services_completed
   +7   is_active                   1 if slot contains a real aircraft, else 0
-[161..176]  vehicle slots (MAX_VEHICLES=4, VEH_FEATURES=4 each)
+[161..180]  vehicle slots (MAX_VEHICLES=4, VEH_FEATURES=5 each)
   +0   state_norm                  VehicleState ordinal / 3  ∈ [0, 1]
   +1   pos_idx_norm                node index / N_NODES  ∈ [0, 1]
   +2   type_norm                   0=fuel_truck, 1=baggage_tug, 2=pushback_tractor
                                    divided by 2  ∈ [0, 1]
   +3   is_free                     1 if vehicle.is_available()
-[177..256]  pending-task slots (MAX_TASKS=16, TASK_FEATURES=5 each)
+  +4   is_reserved                 1 if vehicle.reserved_for is not None
+[181..260]  pending-task slots (MAX_TASKS=16, TASK_FEATURES=5 each)
   +0   svc_type_norm               service type ordinal / 3  ∈ [0, 1]
   +1   gate_idx_norm               gate-node index / N_NODES  ∈ [0, 1]
   +2   age_norm                    (now - created_at) / MAX_DEP_WINDOW  ∈ [0, 1]
   +3   flight_slot_norm            aircraft-slot index / MAX_AIRCRAFT  ∈ [0, 1]
   +4   is_active                   1 if slot contains a real task
-[257]  n_pending_norm              len(pending_tasks) / MAX_TASKS  ∈ [0, 1]
-Total: OBS_DIM = 258
+[261]  n_pending_norm              len(pending_tasks) / MAX_TASKS  ∈ [0, 1]
+[262..333]  anticipated-task slots (MAX_ANTICIPATED=8, ANT_FEATURES=9 each)
+  +0   time_until_actionable_norm  time_until_actionable / ANT_HORIZON  ∈ [0, 1]
+  +1   svc_fuel                    1 if service_type == "fuel"
+  +2   svc_baggage_unload          1 if service_type == "baggage_unload"
+  +3   svc_baggage_load            1 if service_type == "baggage_load"
+  +4   size_small                  1 if aircraft_size_class == 0 (CRJ900)
+  +5   size_medium                 1 if aircraft_size_class == 1 (B737/A320)
+  +6   size_heavy                  1 if aircraft_size_class == 2 (B777)
+  +7   service_duration_norm       service_duration_estimate / 150  ∈ [0, 1]
+  +8   is_active                   1 if slot contains a real anticipated task
+[334]  n_anticipated_beyond_norm   flights beyond 600s horizon / 20  ∈ [0, 1]
+[335]  earliest_ant_norm           min(time_until_actionable) / 600, or 1.0 if none
+[336]  n_reservations_norm         count of reserved vehicles / MAX_VEHICLES
+Total: OBS_DIM = 337
 
-Action space  Discrete(MAX_TASKS + 1 = 17)
-──────────────────────────────────────────
-  action ∈ [0, MAX_TASKS-1]  → assign pending_tasks[action] to nearest free vehicle
-  action == ACTION_HOLD (16) → do nothing, advance sim
+Action space  Discrete(MAX_TASKS + MAX_ANTICIPATED + 1 = 25)
+─────────────────────────────────────────────────────────────
+  action ∈ [0, 15]         → assign pending_tasks[action] to nearest free vehicle
+  action ∈ [16, 23]        → reserve free vehicle for anticipated_tasks[action-16]
+  action == ACTION_HOLD (24) → do nothing, advance sim
 
 Action masking (MaskablePPO compatible via action_masks())
 ──────────────────────────────────────────────────────────
-  mask[i] = True  iff  i < len(pending_tasks)  AND  free compatible vehicle exists
-  mask[ACTION_HOLD] = True ONLY when no assignment action is legal (see HOLD masking rule)
+  mask[i]  = True  iff pending_tasks[i] exists AND free compatible vehicle exists
+  mask[16+j] = True iff anticipated_tasks[j] exists AND free compatible vehicle AND
+               time_until_actionable > est_travel_time + 30s AND not already reserved
+  mask[ACTION_HOLD] = True ONLY when no assignment AND no reservation action is legal
 
 Reward
 ──────
@@ -84,6 +101,7 @@ from sim.scheduler import load_schedule
 from sim.entities import (
     AircraftState, VehicleState,
     FuelTruck, BaggageTug, PushbackTractor,
+    AnticipatedTask,
 )
 from sim.dispatcher import Dispatcher
 
@@ -92,11 +110,15 @@ from sim.dispatcher import Dispatcher
 MAX_AIRCRAFT   = 20    # upper bound on flights per episode
 MAX_VEHICLES   = 4     # fixed fleet (FT×1, BT×2, PB×1)
 MAX_TASKS      = 16    # pending-task slots visible in obs
+MAX_ANTICIPATED = 8    # anticipated-task slots visible in obs
 SIM_HORIZON    = 14400.0   # 4 hours; hard episode time limit (seconds)
 MAX_DEP_WINDOW = 3600.0    # normalisation window for time-to-departure
 
-# Action sentinel
-ACTION_HOLD = MAX_TASKS    # = 16
+# Anticipation horizon (must match dispatcher.ANTICIPATION_HORIZON)
+ANT_HORIZON = 600.0    # seconds
+
+# Action sentinels
+ACTION_HOLD = MAX_TASKS + MAX_ANTICIPATED   # = 24
 
 # Deterministic node index for position encoding (must stay stable)
 ALL_NODES = [
@@ -126,16 +148,22 @@ VEH_TYPE_IDX = {"fuel_truck": 0, "baggage_tug": 1, "pushback_tractor": 2}
 
 # Per-entity feature counts (must match docstring table)
 AC_FEATURES   = 8
-VEH_FEATURES  = 4
+VEH_FEATURES  = 5    # was 4; +1 for is_reserved
 TASK_FEATURES = 5
+ANT_FEATURES  = 9    # per anticipated-task slot
+
+# Service type onehot index for anticipated tasks (no pushback)
+ANT_SVC_TYPES = ["fuel", "baggage_unload", "baggage_load"]
 
 OBS_DIM = (
-    1                            # sim_time_norm
-    + MAX_AIRCRAFT * AC_FEATURES   # 160
-    + MAX_VEHICLES * VEH_FEATURES  # 16
-    + MAX_TASKS    * TASK_FEATURES # 80
-    + 1                            # n_pending_norm
-)  # = 258
+    1                                  # sim_time_norm
+    + MAX_AIRCRAFT  * AC_FEATURES      # 160
+    + MAX_VEHICLES  * VEH_FEATURES     # 20  (was 16; +4 from is_reserved)
+    + MAX_TASKS     * TASK_FEATURES    # 80
+    + 1                                # n_pending_norm
+    + MAX_ANTICIPATED * ANT_FEATURES   # 72  (NEW)
+    + 3                                # global anticipation features (NEW)
+)  # = 337
 
 # ── Reward constants ──────────────────────────────────────────────────────────
 
@@ -200,7 +228,7 @@ class AirportEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-1.0, high=1.0, shape=(OBS_DIM,), dtype=np.float32
         )
-        self.action_space = spaces.Discrete(MAX_TASKS + 1)
+        self.action_space = spaces.Discrete(MAX_TASKS + MAX_ANTICIPATED + 1)  # = 25
 
         # Populated by reset()
         self.dispatcher:       Optional[RLDispatcher] = None
@@ -280,11 +308,22 @@ class AirportEnv(gym.Env):
         reward = 0.0
 
         # --- Apply the action ------------------------------------------------
-        is_hold   = (action == ACTION_HOLD)
-        can_assign = (not is_hold) and self._is_valid_assignment(action)
+        is_hold    = (action == ACTION_HOLD)
+        is_reserve = MAX_TASKS <= action < ACTION_HOLD
+        can_assign = (not is_hold and not is_reserve) and self._is_valid_assignment(action)
+        _ant_idx   = action - MAX_TASKS
+        can_reserve = (
+            is_reserve
+            and _ant_idx < len(self.dispatcher.anticipated_tasks)
+            and self._is_valid_reservation(
+                _ant_idx, self.dispatcher.anticipated_tasks[_ant_idx]
+            )
+        )
 
         if can_assign:
             self._assign_one_task(action)
+        elif can_reserve:
+            self._assign_reservation(action)
         else:
             # Penalise if the agent held/chose invalid action when work existed
             if self._has_decision_point():
@@ -314,35 +353,56 @@ class AirportEnv(gym.Env):
 
     def action_masks(self) -> np.ndarray:
         """
-        Boolean mask of shape (MAX_TASKS+1,) for use with sb3-contrib MaskablePPO.
+        Boolean mask of shape (25,) for use with sb3-contrib MaskablePPO.
         True = the action is legal this step.
 
-        HOLD masking rule: HOLD (action 16) is legal ONLY when zero assignment
-        actions (0-15) are legal.  When any valid assignment exists, the agent
-        must choose an assignment — it cannot defer.  This tightens the contract
-        with the event-based trigger: the trigger only fires when something
-        actionable happened, so holding in that moment is always sub-optimal.
+        Action layout:
+          0..15  — assign pending_tasks[i] to nearest free vehicle
+          16..23 — reserve free vehicle for anticipated_tasks[i-16]
+          24     — HOLD (ACTION_HOLD)
 
-        The only legitimate HOLD scenario is Event C (resources reduced): the
-        trigger fired because the last valid option just disappeared, so all
-        assignment bits are False and HOLD is the sole legal action.
+        HOLD masking rule: HOLD is legal ONLY when zero assignment AND zero
+        reservation actions are legal.  This enforces the event-based trigger
+        contract: the trigger only fires when something actionable exists.
         """
-        mask = np.zeros(MAX_TASKS + 1, dtype=bool)
-        any_assignment = False
+        mask = np.zeros(MAX_TASKS + MAX_ANTICIPATED + 1, dtype=bool)
+        any_actionable = False
+
+        # Assignment actions (0..15)
         for i in range(min(len(self.dispatcher.pending_tasks), MAX_TASKS)):
             if self._is_valid_assignment(i):
                 mask[i] = True
-                any_assignment = True
-        # HOLD only when no assignment is possible
-        mask[ACTION_HOLD] = not any_assignment
+                any_actionable = True
+
+        # Reservation actions (16..23)
+        ant_tasks = self.dispatcher.anticipated_tasks[:MAX_ANTICIPATED]
+        for j, ant in enumerate(ant_tasks):
+            if self._is_valid_reservation(j, ant):
+                mask[MAX_TASKS + j] = True
+                any_actionable = True
+
+        # HOLD only when nothing else is actionable
+        mask[ACTION_HOLD] = not any_actionable
         return mask
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
-    def _has_decision_point(self) -> bool:
-        """Return True if any pending task has a compatible free vehicle."""
+    def _has_assignment_point(self) -> bool:
+        """Return True if any pending task has a compatible free vehicle (assignment only).
+        Used for event detection (Events A/B/C) and safety valve — does NOT include
+        reservation actions, since reservations do not add new query triggers per design."""
         for i in range(len(self.dispatcher.pending_tasks)):
             if self._is_valid_assignment(i):
+                return True
+        return False
+
+    def _has_decision_point(self) -> bool:
+        """Return True if any assignment OR reservation action is currently legal.
+        Used for HOLD masking / hold penalty — covers the full action space."""
+        if self._has_assignment_point():
+            return True
+        for j, ant in enumerate(self.dispatcher.anticipated_tasks[:MAX_ANTICIPATED]):
+            if self._is_valid_reservation(j, ant):
                 return True
         return False
 
@@ -352,6 +412,54 @@ class AirportEnv(gym.Env):
             return False
         task = self.dispatcher.pending_tasks[task_idx]
         return self.dispatcher._find_nearest_vehicle(task.service_type, task.gate_node) is not None
+
+    def _is_valid_reservation(self, ant_idx: int, ant: "AnticipatedTask") -> bool:
+        """
+        True iff:
+          1. A free compatible vehicle exists for this service type.
+          2. time_until_actionable > estimated travel time + 30s buffer.
+          3. No vehicle is already reserved for this (flight_id, service_type).
+        """
+        import networkx as nx
+
+        # Condition 3: already reserved?
+        key = (ant.flight_id, ant.service_type)
+        if any(v.reserved_for == key for v in self.dispatcher.vehicles.values()):
+            return False
+
+        # Condition 1: free compatible vehicle exists?
+        vehicle = self.dispatcher._find_nearest_vehicle(
+            ant.service_type, ant.gate_node_estimate
+        )
+        if vehicle is None:
+            return False
+
+        # Condition 2: enough time to be useful?
+        try:
+            travel_time = nx.shortest_path_length(
+                self.dispatcher.G, vehicle.position, ant.gate_node_estimate,
+                weight="weight"
+            )
+        except Exception:
+            travel_time = 60.0  # conservative fallback
+        return ant.time_until_actionable > travel_time + 30.0
+
+    def _assign_reservation(self, action: int) -> None:
+        """
+        Reserve the nearest free compatible vehicle for anticipated_tasks[action - MAX_TASKS].
+        Sets vehicle.reserved_for = (flight_id, service_type) and reserved_until.
+        """
+        ant_idx = action - MAX_TASKS
+        if ant_idx >= len(self.dispatcher.anticipated_tasks):
+            return
+        ant = self.dispatcher.anticipated_tasks[ant_idx]
+        vehicle = self.dispatcher._find_nearest_vehicle(
+            ant.service_type, ant.gate_node_estimate
+        )
+        if vehicle is None:
+            return
+        vehicle.reserved_for  = (ant.flight_id, ant.service_type)
+        vehicle.reserved_until = self._sim_time + 2.0 * ant.time_until_actionable
 
     def _assign_one_task(self, task_idx: int) -> None:
         """
@@ -413,14 +521,26 @@ class AirportEnv(gym.Env):
         prev_vehicle_states: dict[str, VehicleState] = {
             vid: v.state for vid, v in self.dispatcher.vehicles.items()
         }
+        prev_reserved: set[str] = {
+            vid for vid, v in self.dispatcher.vehicles.items()
+            if v.reserved_for is not None
+        }
         prev_pending_count: int = len(self.dispatcher.pending_tasks)
-        # Event C: was a legal assignment possible before this tick?
-        had_decision_before: bool = self._has_decision_point()
+        # Event C: was a legal ASSIGNMENT possible before this tick?
+        # Uses _has_assignment_point() — reservations do NOT add query triggers.
+        had_assignment_before: bool = self._has_assignment_point()
 
         while self._sim_time < SIM_HORIZON:
             self.dispatcher.tick(self._sim_time, dt=1.0)
             self._sim_time += 1.0
             ticks          += 1
+
+            # Expire stale reservations (reservation expiry reward wired in Step 5)
+            for v in self.dispatcher.vehicles.values():
+                if v.reserved_for is not None and self._sim_time > v.reserved_until:
+                    v.reserved_for  = None
+                    v.reserved_until = 0.0
+                    self.dispatcher.reservation_expirations += 1
 
             delay_r, dep_r = self._compute_tick_reward()
             reward += delay_r + dep_r
@@ -449,36 +569,45 @@ class AirportEnv(gym.Env):
                 for vid, v in self.dispatcher.vehicles.items()
             )
 
+            # Event A': a reservation expired this tick (vehicle became re-available)
+            now_reserved: set[str] = {
+                vid for vid, v in self.dispatcher.vehicles.items()
+                if v.reserved_for is not None
+            }
+            reservation_expired: bool = bool(prev_reserved - now_reserved)
+
             # Event B: new tasks arrived in pending queue this tick
             new_tasks_arrived: bool = (
                 len(self.dispatcher.pending_tasks) > prev_pending_count
             )
 
             # Event C: assignment was possible before tick, impossible after
-            # Covers vehicle breakdown and any mid-episode resource removal.
-            now_has_decision: bool = self._has_decision_point()
-            resources_reduced: bool = had_decision_before and not now_has_decision
+            # Uses assignment-only check — reservations don't trigger Event C.
+            now_has_assignment: bool = self._has_assignment_point()
+            resources_reduced: bool  = had_assignment_before and not now_has_assignment
 
             # Update snapshots for next tick
-            prev_vehicle_states = {
+            prev_vehicle_states  = {
                 vid: v.state for vid, v in self.dispatcher.vehicles.items()
             }
-            prev_pending_count  = len(self.dispatcher.pending_tasks)
-            had_decision_before = now_has_decision
+            prev_reserved        = now_reserved
+            prev_pending_count   = len(self.dispatcher.pending_tasks)
+            had_assignment_before = now_has_assignment
 
             # ── Trigger query ──────────────────────────────────────────────────
-            # Event C: resources reduced — query even with no valid assignments
-            # so the agent observes the change (mask will show HOLD only).
+            # Event C: assignment opportunity disappeared — query so agent observes
+            # the change. Mask may show only HOLD or show reservation actions.
             if resources_reduced:
                 break
 
-            # Events A / B: something new became assignable
-            if (vehicle_freed or new_tasks_arrived) and now_has_decision:
+            # Events A / A' / B: something new became assignable
+            if (vehicle_freed or reservation_expired or new_tasks_arrived) and now_has_assignment:
                 break
 
             # ── Safety valve: 600-tick inactivity guard ────────────────────────
-            # Should never fire in correct operation. Signals a missed event type.
-            if ticks == 600 and now_has_decision:
+            # Fires only when pending assignments are stuck. Reservation-only states
+            # intentionally do not trigger here — they wait for Events A/B/C.
+            if ticks == 600 and now_has_assignment:
                 warnings.warn(
                     f"[AirportEnv] No decision event in {ticks} ticks "
                     f"(sim_time={self._sim_time:.0f}s). "
@@ -583,7 +712,7 @@ class AirportEnv(gym.Env):
             # else: slot stays zero-padded
             cursor += AC_FEATURES
 
-        # Vehicle slots
+        # Vehicle slots (VEH_FEATURES=5: state, pos, type, is_free, is_reserved)
         veh_list = list(self.dispatcher.vehicles.values())
         for i in range(MAX_VEHICLES):
             if i < len(veh_list):
@@ -592,6 +721,7 @@ class AirportEnv(gym.Env):
                 obs[cursor + 1] = NODE_IDX.get(v.position, 0) / N_NODES
                 obs[cursor + 2] = VEH_TYPE_IDX.get(v.vehicle_type, 0) / 2.0
                 obs[cursor + 3] = 1.0 if v.is_available() else 0.0
+                obs[cursor + 4] = 1.0 if v.reserved_for is not None else 0.0
             cursor += VEH_FEATURES
 
         # Pending-task slots
@@ -614,6 +744,48 @@ class AirportEnv(gym.Env):
 
         # n_pending_norm
         obs[cursor] = min(len(self.dispatcher.pending_tasks), MAX_TASKS) / MAX_TASKS
+        cursor += 1
+
+        # Anticipated-task slots (ANT_FEATURES=9 each)
+        ant_tasks = self.dispatcher.anticipated_tasks[:MAX_ANTICIPATED]
+        for i in range(MAX_ANTICIPATED):
+            if i < len(ant_tasks):
+                at = ant_tasks[i]
+                obs[cursor + 0] = float(np.clip(at.time_until_actionable / ANT_HORIZON, 0.0, 1.0))
+                obs[cursor + 1] = 1.0 if at.service_type == "fuel"           else 0.0
+                obs[cursor + 2] = 1.0 if at.service_type == "baggage_unload" else 0.0
+                obs[cursor + 3] = 1.0 if at.service_type == "baggage_load"   else 0.0
+                obs[cursor + 4] = 1.0 if at.aircraft_size_class == 0         else 0.0
+                obs[cursor + 5] = 1.0 if at.aircraft_size_class == 1         else 0.0
+                obs[cursor + 6] = 1.0 if at.aircraft_size_class == 2         else 0.0
+                obs[cursor + 7] = float(np.clip(at.service_duration_estimate / 150.0, 0.0, 1.0))
+                obs[cursor + 8] = 1.0   # is_active
+            cursor += ANT_FEATURES
+
+        # Global anticipation features (3)
+        # n_anticipated_beyond_norm: flights approaching but beyond 600s horizon
+        n_beyond = sum(
+            1 for ac in self.dispatcher.aircraft.values()
+            if ac.state == AircraftState.APPROACHING
+            and ac.scheduled_arrival - now > ANT_HORIZON
+        )
+        obs[cursor] = float(np.clip(n_beyond / 20.0, 0.0, 1.0))
+        cursor += 1
+
+        # earliest_ant_norm: most urgent anticipated task (or 1.0 if none)
+        if self.dispatcher.anticipated_tasks:
+            earliest = self.dispatcher.anticipated_tasks[0].time_until_actionable
+            obs[cursor] = float(np.clip(earliest / ANT_HORIZON, 0.0, 1.0))
+        else:
+            obs[cursor] = 1.0
+        cursor += 1
+
+        # n_reservations_norm: fraction of vehicles currently reserved
+        n_reserved = sum(
+            1 for v in self.dispatcher.vehicles.values()
+            if v.reserved_for is not None
+        )
+        obs[cursor] = float(np.clip(n_reserved / MAX_VEHICLES, 0.0, 1.0))
         cursor += 1
 
         assert cursor == OBS_DIM, f"Obs cursor mismatch: {cursor} != {OBS_DIM}"

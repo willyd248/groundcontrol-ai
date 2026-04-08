@@ -126,7 +126,7 @@ class TestObsAndMaskShapes:
         env = AirportEnv(schedule_path="schedule.json")
         env.reset()
         mask = env.action_masks()
-        assert mask.shape == (MAX_TASKS + 1,)
+        assert mask.shape == (ACTION_HOLD + 1,)
         assert mask.dtype == bool
         env.close()
 
@@ -285,11 +285,25 @@ class TestMaskValidity:
 
         for _ in range(200):
             mask  = env.action_masks()
-            # Every non-hold masked action must have a vehicle available
-            for i, valid in enumerate(mask[:-1]):   # exclude hold
-                if valid:
+            # Every non-hold masked action must be valid
+            for i, valid in enumerate(mask[:-1]):   # exclude hold (ACTION_HOLD)
+                if not valid:
+                    continue
+                if i < MAX_TASKS:
+                    # Assignment action: must have a compatible free vehicle
                     assert env._is_valid_assignment(i), (
-                        f"Mask says action {i} is valid but no vehicle available"
+                        f"Mask says assignment action {i} is valid but no vehicle available"
+                    )
+                else:
+                    # Reservation action: must have a valid anticipated task + vehicle
+                    ant_idx = i - MAX_TASKS
+                    assert ant_idx < len(env.dispatcher.anticipated_tasks), (
+                        f"Mask says reservation action {i} valid but anticipated_tasks[{ant_idx}] missing"
+                    )
+                    assert env._is_valid_reservation(
+                        ant_idx, env.dispatcher.anticipated_tasks[ant_idx]
+                    ), (
+                        f"Mask says reservation action {i} valid but _is_valid_reservation returned False"
                     )
 
             action = random_valid_action(env, rng)
