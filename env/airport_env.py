@@ -187,11 +187,67 @@ class RLDispatcher(Dispatcher):
     Dispatcher with vehicle assignment disabled.
     The RL environment feeds one action at a time instead.
     All other dispatcher logic (gates, taxiing, runways, services) runs normally.
+
+    Also overrides _create_service_tasks() to implement reservation conversion ordering
+    (ANTICIPATION_DESIGN_v2 Section 3): when a new pending task is created, check for a
+    matching vehicle reservation BEFORE returning control to the env. If a reservation
+    matches, auto-assign the reserved vehicle immediately. The task never appears in
+    pending_tasks from the env's perspective.
     """
 
     def _assign_vehicles(self, now: float) -> None:  # noqa: ARG002
         # Deliberately a no-op — env controls vehicle assignment.
         pass
+
+    def _create_service_tasks(self, now: float) -> None:
+        """
+        Override of Dispatcher._create_service_tasks with reservation conversion.
+
+        Ordering guarantee (per design doc Section 3):
+          1. Call super() to create tasks and append to pending_tasks.
+          2. For each newly appended task, check if any vehicle has reserved_for
+             matching (flight_id, service_type).
+          3. If match found: auto-assign the reserved vehicle, move task to
+             active_tasks, remove from pending_tasks. Task never surfaces to agent.
+          4. Only after all conversions resolved does control return to env.
+        """
+        pending_ids_before: set[str] = {t.task_id for t in self.pending_tasks}
+        super()._create_service_tasks(now)
+
+        # Reservation conversion: check tasks added by super()
+        for task in list(self.pending_tasks):
+            if task.task_id in pending_ids_before:
+                continue  # not newly added
+
+            key = (task.flight_id, task.service_type)
+            matched_vehicle = None
+            for v in self.vehicles.values():
+                if v.reserved_for == key and now <= v.reserved_until:
+                    matched_vehicle = v
+                    break
+
+            if matched_vehicle is None:
+                continue  # no reservation — stays in pending_tasks for agent
+
+            # Auto-assign the reserved vehicle to this task
+            matched_vehicle.assigned_to   = task.flight_id
+            matched_vehicle.committed     = True
+            matched_vehicle.state         = VehicleState.EN_ROUTE
+            matched_vehicle.reserved_for  = None
+            matched_vehicle.reserved_until = 0.0
+            try:
+                path = shortest_path(self.G, matched_vehicle.position, task.gate_node)
+                matched_vehicle.path = path[1:]
+            except ValueError:
+                matched_vehicle.path = []
+
+            task.assigned_vehicle_id = matched_vehicle.vehicle_id
+            task.started_at          = now
+            self.active_tasks[task.task_id] = task
+            self.pending_tasks.remove(task)
+            self.vehicles_dispatched    += 1
+            self.tasks_started          += 1
+            self.reservation_fulfillments += 1
 
 
 # ── Fleet factory ─────────────────────────────────────────────────────────────
@@ -320,17 +376,20 @@ class AirportEnv(gym.Env):
             )
         )
 
+        action_taken = False
         if can_assign:
             self._assign_one_task(action)
+            action_taken = True
         elif can_reserve:
             self._assign_reservation(action)
+            action_taken = True
         else:
             # Penalise if the agent held/chose invalid action when work existed
             if self._has_decision_point():
                 reward += REWARD_HOLD_WITH_WORK
 
         # --- Advance sim to next decision point ------------------------------
-        reward += self._advance_to_decision()
+        reward += self._advance_to_decision(action_taken=action_taken)
 
         # --- Termination -----------------------------------------------------
         all_done  = all(
@@ -487,7 +546,7 @@ class AirportEnv(gym.Env):
         self.dispatcher.vehicles_dispatched += 1
         self.dispatcher.tasks_started += 1
 
-    def _advance_to_decision(self) -> float:
+    def _advance_to_decision(self, action_taken: bool = False) -> float:
         """
         Tick the sim (dt=1 each tick) until a genuine scheduling event fires,
         then return exactly one query to the agent.
@@ -529,6 +588,11 @@ class AirportEnv(gym.Env):
         # Event C: was a legal ASSIGNMENT possible before this tick?
         # Uses _has_assignment_point() — reservations do NOT add query triggers.
         had_assignment_before: bool = self._has_assignment_point()
+        # Burst mode: after any action (assign or reserve), remaining pending tasks
+        # should be offered to the agent after 1 tick without a 600-tick wait. ONLY
+        # fires when a non-HOLD action was taken — preserving safety-valve behavior
+        # for pure HOLD scenarios where nothing changes.
+        burst_work_at_entry: bool = action_taken and had_assignment_before
 
         while self._sim_time < SIM_HORIZON:
             self.dispatcher.tick(self._sim_time, dt=1.0)
@@ -602,6 +666,13 @@ class AirportEnv(gym.Env):
 
             # Events A / A' / B: something new became assignable
             if (vehicle_freed or reservation_expired or new_tasks_arrived) and now_has_assignment:
+                break
+
+            # Burst event: work existed at advance-entry (e.g. tasks remain after
+            # a burst arrival or reservation conversion). Return after first tick so
+            # the agent can assign remaining tasks without a 600-tick wait.
+            if burst_work_at_entry and now_has_assignment:
+                burst_work_at_entry = False   # clear so it fires only once
                 break
 
             # ── Safety valve: 600-tick inactivity guard ────────────────────────
@@ -793,8 +864,15 @@ class AirportEnv(gym.Env):
 
     def _build_info(self) -> dict:
         m = self.dispatcher.metrics()
-        m["sim_time"]           = self._sim_time
-        m["n_pending_tasks"]    = len(self.dispatcher.pending_tasks)
-        m["conflict_terminated"] = self._conflict_terminated
-        m["abandonment_count"]  = len(self._abandoned_task_ids)
+        m["sim_time"]                 = self._sim_time
+        m["n_pending_tasks"]          = len(self.dispatcher.pending_tasks)
+        m["conflict_terminated"]      = self._conflict_terminated
+        m["abandonment_count"]        = len(self._abandoned_task_ids)
+        m["n_anticipated_tasks"]      = len(self.dispatcher.anticipated_tasks)
+        m["reservation_fulfillments"] = self.dispatcher.reservation_fulfillments
+        m["reservation_expirations"]  = self.dispatcher.reservation_expirations
+        m["n_active_reservations"]    = sum(
+            1 for v in self.dispatcher.vehicles.values()
+            if v.reserved_for is not None
+        )
         return m
