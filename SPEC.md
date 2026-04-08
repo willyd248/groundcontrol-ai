@@ -554,3 +554,54 @@ python -m demo.side_by_side \
 | `demo/scenarios/easy.json` | 4-flight benchmark (light traffic) |
 | `demo/scenarios/medium.json` | 8-flight benchmark (B777 fuel-truck contention) |
 | `demo/scenarios/stress.json` | 12-flight benchmark (3 B777s + tight windows) |
+
+---
+
+## Session 5 — v5 Locked Training Distribution
+
+### Overview
+
+Session 5 finalises the training environment configuration after iterating through
+five diagnostic rounds (v1–v5). The v5 configuration creates maximal contention
+with 14.1% greedy-suboptimality headroom — enough room for the RL agent to learn
+meaningful improvements over FCFS.
+
+### v5 Configuration (LOCKED — production training)
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| Schedule density | **tight** | 2–3 clustered waves, 0–15 min slack, 10–20 flights |
+| Fleet | **FT×1, BT×2, PB×1** (4 vehicles) | Maximises resource contention |
+| HOLD masking | HOLD illegal when any assignment is legal | Eliminates degenerate hold-spam |
+| Decision trigger | Event-based (A/B/C events) | Queries agent only when state changes |
+| Observation dim | 258 | MAX_VEHICLES=4, OBS_DIM=258 |
+| Action space | Discrete(17) | 16 task slots + 1 HOLD |
+
+### Diagnostic History
+
+| Version | Config | Suboptimality | Verdict |
+|---------|--------|---------------|---------|
+| v1 | loose + FT×2/BT×3/PB×2 | 1.4% | Too easy — FCFS nearly optimal |
+| v2 | loose + FT×3/BT×3/PB×2 | ~1.4% | Excess fuel trucks — no improvement |
+| v3 | loose + FT×1/BT×2/PB×1 | 1.5% | Right fleet, schedule too slack |
+| v4 | tight + FT×2/BT×2/PB×2 | 9.8% | Close — fleet still too generous |
+| v5 | **tight + FT×1/BT×2/PB×1** | **14.1%** | **LOCKED** — sufficient headroom |
+
+### Key Metrics (v5, 50 seeds)
+
+- Mean FCFS delay: 83.0 min/episode
+- Mean greedy-suboptimality: 14.1% (0.722 min mean improvement per episode)
+- Real-choice queries per episode: 39.6 (66.4% of all queries)
+- HOLD-only queries: 0% (HOLD masking eliminates these)
+- Zero undeparted flights across all seeds
+
+### Files Added/Modified
+
+| File | Change |
+|------|--------|
+| `env/random_schedule.py` | Added `density` parameter, tight schedule generator |
+| `env/airport_env.py` | Fleet → FT×1/BT×2/PB×1, HOLD masking, event-based trigger, OBS_DIM=258 |
+| `train/eval_health.py` | Full policy health diagnostic script |
+| `train/callbacks.py` | Decision counting, abandonment tracking |
+| `train/train_ppo.py` | VecMonitor, EpisodeMetricsCallback, model snapshots |
+| `LEGAL_ACTION_DIAGNOSTIC_v[1-5].md` | Diagnostic reports for each config iteration |

@@ -78,12 +78,15 @@ def run_policy_episode(model, seed: int = 42) -> dict:
     obs, info = eval_env.reset(seed=seed)
 
     done = False
+    step = 0
     while not done:
         masks = eval_env.action_masks()
         action, _ = model.predict(obs, action_masks=masks, deterministic=True)
         obs, _reward, terminated, truncated, info = eval_env.step(int(action))
+        step += 1
         done = terminated or truncated
 
+    info["decisions"] = step
     eval_env.close()
     return info
 
@@ -154,6 +157,8 @@ class AirportEvalCallback(BaseCallback):
 
         self.logger.record("eval/delay_improvement",  delay_improvement)
         self.logger.record("eval/missed_improvement", missed_improvement)
+        self.logger.record("eval/rl_decisions",        rl.get("decisions", 0))
+        self.logger.record("eval/rl_abandonment_count", rl.get("abandonment_count", 0))
         self.logger.dump(self.num_timesteps)
 
         if self.verbose:
@@ -163,7 +168,9 @@ class AirportEvalCallback(BaseCallback):
                 f"delay: RL={rl['total_delay_minutes']:.1f} vs FCFS={fc['total_delay_minutes']:.1f} "
                 f"({sign}{delay_improvement:.1f} min) | "
                 f"missed: RL={rl['flights_pending']} vs FCFS={fc['flights_pending']} | "
-                f"conflicts: {rl['conflict_count']}"
+                f"conflicts: {rl['conflict_count']} | "
+                f"decisions: {rl.get('decisions', 0)} | "
+                f"abandonment: {rl.get('abandonment_count', 0)}"
             )
             if delay_improvement < 0 and self.num_timesteps >= 200_000:
                 print(

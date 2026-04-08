@@ -30,8 +30,8 @@ import argparse
 import os
 
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv
-from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList, BaseCallback
 from sb3_contrib import MaskablePPO
 
 from env.airport_env import AirportEnv
@@ -47,7 +47,7 @@ N_EPOCHS           = 10
 GAMMA              = 0.99
 CLIP_RANGE         = 0.2
 ENT_COEF           = 0.01
-TOTAL_TIMESTEPS    = 1_000_000
+TOTAL_TIMESTEPS    = 2_000_000
 CHECKPOINT_FREQ    = 50_000     # recovery checkpoints — every N timesteps (total)
 MODELS_FREQ        = 250_000    # official model snapshots — every N timesteps (total)
 EVAL_FREQ          = 50_000     # evaluate vs FCFS every N timesteps
@@ -67,6 +67,31 @@ def _make_env(rank: int):
         env.reset(seed=rank)
         return env
     return _init
+
+
+# ── EpisodeMetricsCallback ────────────────────────────────────────────────────
+
+class EpisodeMetricsCallback(BaseCallback):
+    """Tracks conflict terminations and abandonment counts across training episodes."""
+    def __init__(self, verbose: int = 0) -> None:
+        super().__init__(verbose)
+        self._n_eps_conflict = 0
+        self._n_eps_total    = 0
+
+    def _on_step(self) -> bool:
+        for done, info in zip(self.locals["dones"], self.locals["infos"]):
+            if done:
+                self._n_eps_total += 1
+                if info.get("conflict_terminated", False):
+                    self._n_eps_conflict += 1
+        if self._n_eps_total > 0 and self.num_timesteps % 10_000 == 0:
+            self.logger.record(
+                "train/conflict_term_rate",
+                self._n_eps_conflict / self._n_eps_total,
+            )
+            self.logger.record("train/n_eps_conflict", self._n_eps_conflict)
+            self.logger.dump(self.num_timesteps)
+        return True
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -92,7 +117,7 @@ def main() -> None:
     os.makedirs(TENSORBOARD_LOG, exist_ok=True)
 
     # ── Build vectorised env ─────────────────────────────────────────────────
-    vec_env = SubprocVecEnv([_make_env(i) for i in range(args.n_envs)])
+    vec_env = VecMonitor(SubprocVecEnv([_make_env(i) for i in range(args.n_envs)]))
 
     # ── Build or load model ──────────────────────────────────────────────────
     if args.resume:
@@ -137,7 +162,8 @@ def main() -> None:
         eval_seed=EVAL_SEED,
         verbose=1,
     )
-    callbacks = CallbackList([checkpoint_cb, models_cb, eval_cb])
+    episode_cb = EpisodeMetricsCallback(verbose=1)
+    callbacks = CallbackList([checkpoint_cb, models_cb, eval_cb, episode_cb])
 
     # ── Train ────────────────────────────────────────────────────────────────
     print(
