@@ -323,15 +323,15 @@ The sim ticks (dt=1s each) until a decision point, episode end, or the
 
 ### Observation Space
 
-`Box(low=-1, high=1, shape=(274,), dtype=float32)`
+`Box(low=-1, high=1, shape=(258,), dtype=float32)`
 
 | Slice | Entity | Fields |
 |-------|--------|--------|
 | [0] | sim | `sim_time / SIM_HORIZON` |
 | [1..160] | 20 aircraft slots × 8 features | state_norm, pos_idx_norm, time_to_dep_norm, fuel_done, baggage_unload_done, baggage_load_done, pushback_done, is_active |
-| [161..192] | 8 vehicle slots × 4 features | state_norm, pos_idx_norm, type_norm, is_free |
-| [193..272] | 16 task slots × 5 features | svc_type_norm, gate_idx_norm, age_norm, flight_slot_norm, is_active |
-| [273] | pending queue | `n_pending / MAX_TASKS` |
+| [161..176] | 4 vehicle slots × 4 features | state_norm, pos_idx_norm, type_norm, is_free |
+| [177..256] | 16 task slots × 5 features | svc_type_norm, gate_idx_norm, age_norm, flight_slot_norm, is_active |
+| [257] | pending queue | `n_pending / MAX_TASKS` |
 
 Position encoding uses a fixed 15-node index (`ALL_NODES` in `airport_env.py`).
 All values clamped to [-1, 1].
@@ -490,7 +490,7 @@ demo/scenarios/
 ### Determinism Guarantee
 
 Both runners are initialised from the **same JSON schedule file** with the
-**same fleet** (FT×3, BT×3, PB×2) at **t=0**.  `_DemoAirportEnv.reset()`
+**same fleet** (FT×1, BT×2, PB×1) at **t=0**.  `_DemoAirportEnv.reset()`
 skips the auto-advance-to-decision-point so both sides truly start at tick 0.
 There is no RNG in the FCFS dispatcher or the static schedule loader — all
 nondeterminism was removed at the schedule level.

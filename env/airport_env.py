@@ -30,20 +30,20 @@ Index  Field                        Encoding
   +5   baggage_load_done           1 if "baggage_load" in services_completed
   +6   pushback_done               1 if "pushback" in services_completed
   +7   is_active                   1 if slot contains a real aircraft, else 0
-[161..192]  vehicle slots (MAX_VEHICLES=8, VEH_FEATURES=4 each)
+[161..176]  vehicle slots (MAX_VEHICLES=4, VEH_FEATURES=4 each)
   +0   state_norm                  VehicleState ordinal / 3  ∈ [0, 1]
   +1   pos_idx_norm                node index / N_NODES  ∈ [0, 1]
   +2   type_norm                   0=fuel_truck, 1=baggage_tug, 2=pushback_tractor
                                    divided by 2  ∈ [0, 1]
   +3   is_free                     1 if vehicle.is_available()
-[193..272]  pending-task slots (MAX_TASKS=16, TASK_FEATURES=5 each)
+[177..256]  pending-task slots (MAX_TASKS=16, TASK_FEATURES=5 each)
   +0   svc_type_norm               service type ordinal / 3  ∈ [0, 1]
   +1   gate_idx_norm               gate-node index / N_NODES  ∈ [0, 1]
   +2   age_norm                    (now - created_at) / MAX_DEP_WINDOW  ∈ [0, 1]
   +3   flight_slot_norm            aircraft-slot index / MAX_AIRCRAFT  ∈ [0, 1]
   +4   is_active                   1 if slot contains a real task
-[273]  n_pending_norm              len(pending_tasks) / MAX_TASKS  ∈ [0, 1]
-Total: OBS_DIM = 274
+[257]  n_pending_norm              len(pending_tasks) / MAX_TASKS  ∈ [0, 1]
+Total: OBS_DIM = 258
 
 Action space  Discrete(MAX_TASKS + 1 = 17)
 ──────────────────────────────────────────
@@ -90,7 +90,7 @@ from sim.dispatcher import Dispatcher
 # ── Observation-space constants ───────────────────────────────────────────────
 
 MAX_AIRCRAFT   = 20    # upper bound on flights per episode
-MAX_VEHICLES   = 8     # fixed fleet (FT×3, BT×3, PB×2)
+MAX_VEHICLES   = 4     # fixed fleet (FT×1, BT×2, PB×1)
 MAX_TASKS      = 16    # pending-task slots visible in obs
 SIM_HORIZON    = 14400.0   # 4 hours; hard episode time limit (seconds)
 MAX_DEP_WINDOW = 3600.0    # normalisation window for time-to-departure
@@ -132,10 +132,10 @@ TASK_FEATURES = 5
 OBS_DIM = (
     1                            # sim_time_norm
     + MAX_AIRCRAFT * AC_FEATURES   # 160
-    + MAX_VEHICLES * VEH_FEATURES  # 32
+    + MAX_VEHICLES * VEH_FEATURES  # 16
     + MAX_TASKS    * TASK_FEATURES # 80
     + 1                            # n_pending_norm
-)  # = 274
+)  # = 258
 
 # ── Reward constants ──────────────────────────────────────────────────────────
 
@@ -171,13 +171,9 @@ class RLDispatcher(Dispatcher):
 def _build_fleet():
     return [
         FuelTruck(vehicle_id="FT1", position="DEPOT"),
-        FuelTruck(vehicle_id="FT2", position="DEPOT"),
-        FuelTruck(vehicle_id="FT3", position="DEPOT"),
         BaggageTug(vehicle_id="BT1", position="DEPOT"),
         BaggageTug(vehicle_id="BT2", position="DEPOT"),
-        BaggageTug(vehicle_id="BT3", position="DEPOT"),
         PushbackTractor(vehicle_id="PB1", position="DEPOT"),
-        PushbackTractor(vehicle_id="PB2", position="DEPOT"),
     ]
 
 
