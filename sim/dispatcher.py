@@ -20,7 +20,7 @@ import networkx as nx
 from sim.entities import (
     Aircraft, AircraftState, Gate, Runway, RunwayState,
     Vehicle, VehicleState, FuelTruck, BaggageTug, PushbackTractor,
-    ServiceTask,
+    ServiceTask, AnticipatedTask, AIRCRAFT_SIZE_CLASS, AIRCRAFT_TYPE_DEFAULTS,
 )
 from sim.world import (
     shortest_path, is_segment_free, occupy_segment, release_segment,
@@ -32,6 +32,11 @@ from sim.world import (
 
 LANDING_CLEARANCE  = 60.0   # seconds after landing before next runway op
 DEPARTURE_CLEARANCE = 30.0  # seconds of runway clear before departure allowed
+
+# Anticipation constants
+ANTICIPATION_HORIZON = 600.0   # seconds of lookahead for anticipated tasks
+AVG_TAXI_TIME        = 120.0   # estimated gate-transit time for APPROACHING aircraft (seconds)
+ANT_SVC_TYPES = ["fuel", "baggage_unload", "baggage_load"]  # pushback excluded
 
 
 class Dispatcher:
@@ -54,6 +59,13 @@ class Dispatcher:
         # Active tasks (assigned, vehicle en route or servicing)
         self.active_tasks: dict[str, ServiceTask] = {}  # task_id → task
         self._task_counter = 0
+
+        # Anticipated tasks (lookahead for APPROACHING/TAXIING_IN aircraft)
+        self.anticipated_tasks: list[AnticipatedTask] = []
+
+        # Reservation metrics (incremented by RLDispatcher overrides)
+        self.reservation_fulfillments = 0   # successful reservation auto-assignments
+        self.reservation_expirations  = 0   # reservations that expired unused
 
         # Metrics
         self.conflict_count = 0
@@ -79,6 +91,7 @@ class Dispatcher:
         self._complete_landings(now)
         self._assign_gates(now)
         self._advance_aircraft(now, dt)
+        self._update_anticipated_tasks(now)   # rebuild after aircraft state changes
         self._create_service_tasks(now)
         self._assign_vehicles(now)
         self._advance_vehicles(now, dt)
@@ -254,6 +267,93 @@ class Dispatcher:
             if eid == ac.flight_id and v == current_pos:
                 if self.G.has_edge(u, v) and self.G[u][v].get("occupied_by") == ac.flight_id:
                     release_segment(self.G, u, v, ac.flight_id)
+
+    # -----------------------------------------------------------------------
+    # 5b. Update anticipated tasks (lookahead for APPROACHING/TAXIING_IN)
+    # -----------------------------------------------------------------------
+
+    def _update_anticipated_tasks(self, now: float) -> None:
+        """
+        Rebuild anticipated_tasks each tick.
+
+        For each aircraft in APPROACHING or TAXIING_IN state within the 600s
+        lookahead horizon, project the services that will be needed once the
+        aircraft reaches its gate. Pushback is excluded (too far in future).
+        Sort ascending by time_until_actionable (most urgent first).
+        """
+        # Index existing task service types per flight (pending + active)
+        # so we don't duplicate anticipated tasks for services already queued.
+        existing: dict[str, set[str]] = {}
+        for t in self.pending_tasks:
+            existing.setdefault(t.flight_id, set()).add(t.service_type)
+        for t in self.active_tasks.values():
+            existing.setdefault(t.flight_id, set()).add(t.service_type)
+
+        new_anticipated: list[AnticipatedTask] = []
+
+        for ac in self.aircraft.values():
+            if ac.state == AircraftState.APPROACHING:
+                # Time until gate = time until landing + average taxi time
+                time_to_gate = max(0.0, ac.scheduled_arrival - now) + AVG_TAXI_TIME
+            elif ac.state == AircraftState.TAXIING_IN:
+                # Each path step ≈ 1 sim-second (aircraft advances one node/tick)
+                time_to_gate = float(len(ac.path))
+            else:
+                continue  # AT_GATE, SERVICING, etc. — already actionable or done
+
+            if time_to_gate > ANTICIPATION_HORIZON:
+                continue  # beyond lookahead window
+
+            # Gate node estimate
+            if ac.assigned_gate and ac.assigned_gate in self.gates:
+                gate_node = self.gates[ac.assigned_gate].position_node
+            else:
+                gate_node = self._estimate_gate_node(now)
+
+            size_class = AIRCRAFT_SIZE_CLASS.get(ac.aircraft_type, 1)
+            defaults   = AIRCRAFT_TYPE_DEFAULTS.get(ac.aircraft_type, {})
+            done       = ac.services_completed | existing.get(ac.flight_id, set())
+
+            for svc in ANT_SVC_TYPES:
+                # Only anticipate services this aircraft actually needs
+                if svc == "fuel" and not ac.service_requirements.needs_fuel:
+                    continue
+                if svc == "baggage_unload" and not ac.service_requirements.needs_baggage_unload:
+                    continue
+                if svc == "baggage_load" and not ac.service_requirements.needs_baggage_load:
+                    continue
+                if svc in done:
+                    continue
+
+                # Duration estimate from aircraft-type defaults
+                if svc == "fuel":
+                    fuel_amount  = defaults.get("fuel_amount", 5000)
+                    duration_est = fuel_amount / 100.0
+                else:
+                    bag_count    = defaults.get("baggage_count", 120)
+                    duration_est = bag_count * 0.5
+
+                new_anticipated.append(AnticipatedTask(
+                    flight_id=ac.flight_id,
+                    service_type=svc,
+                    time_until_actionable=time_to_gate,
+                    aircraft_type=ac.aircraft_type,
+                    aircraft_size_class=size_class,
+                    service_duration_estimate=duration_est,
+                    gate_node_estimate=gate_node,
+                ))
+
+        # Sort by urgency (lowest time_until_actionable first)
+        new_anticipated.sort(key=lambda t: t.time_until_actionable)
+        self.anticipated_tasks = new_anticipated
+
+    def _estimate_gate_node(self, now: float) -> str:
+        """Return a gate node estimate when no gate has been assigned yet."""
+        for gate in self.gates.values():
+            if gate.is_free(now):
+                return gate.position_node
+        gates = list(self.gates.values())
+        return gates[0].position_node if gates else "DEPOT"
 
     # -----------------------------------------------------------------------
     # 6. Create service tasks when aircraft reaches gate

@@ -9,6 +9,18 @@ from typing import Optional
 
 
 # ---------------------------------------------------------------------------
+# Aircraft size class (used by anticipation system)
+# ---------------------------------------------------------------------------
+
+AIRCRAFT_SIZE_CLASS: dict[str, int] = {
+    "CRJ900": 0,   # small
+    "B737":   1,   # medium
+    "A320":   1,   # medium
+    "B777":   2,   # heavy
+}
+
+
+# ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
@@ -163,12 +175,21 @@ class Vehicle:
     service_end_time: float = 0.0
     committed: bool = False              # True while executing an active task
 
+    # Reservation state (anticipation upgrade)
+    reserved_for: Optional[tuple] = None  # (flight_id, service_type) or None
+    reserved_until: float = 0.0           # sim-time expiry of reservation
+
     # Visual
     pixel_x: float = 0.0
     pixel_y: float = 0.0
 
     def is_available(self) -> bool:
-        return self.state == VehicleState.IDLE and self.assigned_to is None and not self.committed
+        return (
+            self.state == VehicleState.IDLE
+            and self.assigned_to is None
+            and not self.committed
+            and self.reserved_for is None
+        )
 
     def __repr__(self) -> str:
         return f"<{self.vehicle_type} {self.vehicle_id} {self.state.value}>"
@@ -222,3 +243,22 @@ class ServiceTask:
         elif self.service_type == "pushback":
             return 120.0                       # 2 minutes flat
         return 60.0
+
+
+# ---------------------------------------------------------------------------
+# Anticipated task (used by anticipation system)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AnticipatedTask:
+    """
+    A service task that will be needed once an APPROACHING/TAXIING_IN aircraft
+    reaches its gate. Not yet actionable — used for agent lookahead only.
+    """
+    flight_id: str
+    service_type: str                    # "fuel", "baggage_unload", "baggage_load"
+    time_until_actionable: float         # seconds until flight reaches gate
+    aircraft_type: str
+    aircraft_size_class: int             # 0=small(CRJ900), 1=medium(B737/A320), 2=heavy(B777)
+    service_duration_estimate: float     # seconds (based on aircraft-type defaults)
+    gate_node_estimate: str              # best-guess gate node
