@@ -167,14 +167,16 @@ OBS_DIM = (
 
 # ── Reward constants ──────────────────────────────────────────────────────────
 
-REWARD_PER_DELAY_MINUTE   = -1.0    # per flight-minute of new delay this tick
-REWARD_ONTIME_DEPARTURE   = +10.0   # departed ≤ 5 min late
-REWARD_LATE_DEPARTURE     = +2.0    # departed > 5 min late
-REWARD_HOLD_WITH_WORK     = -0.1    # held when valid assignment existed
-REWARD_CONFLICT           = -50.0   # per additional conflict in the same tick (rarely > 1)
-REWARD_CONFLICT_TERMINAL  = -200.0  # lump-sum on the tick that produces the first conflict
-REWARD_PENDING_AT_TIMEOUT = -20.0   # per flight still pending at truncation
-REWARD_ABANDONMENT        = -1.0    # per minute of service time wasted on an abandoned task
+REWARD_PER_DELAY_MINUTE        = -1.0   # per flight-minute of new delay this tick
+REWARD_ONTIME_DEPARTURE        = +10.0  # departed ≤ 5 min late
+REWARD_LATE_DEPARTURE          = +2.0   # departed > 5 min late
+REWARD_HOLD_WITH_WORK          = -0.1   # held when valid assignment existed
+REWARD_CONFLICT                = -50.0  # per additional conflict in the same tick (rarely > 1)
+REWARD_CONFLICT_TERMINAL       = -200.0 # lump-sum on the tick that produces the first conflict
+REWARD_PENDING_AT_TIMEOUT      = -20.0  # per flight still pending at truncation
+REWARD_ABANDONMENT             = -1.0   # per minute of service time wasted on an abandoned task
+REWARD_FULFILLED_RESERVATION   = +1.0   # Signal 7: reservation auto-assigned successfully
+REWARD_EXPIRED_RESERVATION     = -0.5   # Signal 8: reservation expired unused
 
 # Safety limit: max sim-ticks between decision points before we force a return
 MAX_TICKS_PER_STEP = 3600          # 1 sim-hour
@@ -295,6 +297,8 @@ class AirportEnv(gym.Env):
         self._prev_conflict_count: int  = 0
         self._departed_ids:    set[str] = set()
         self._conflict_terminated: bool = False
+        self._prev_reservation_fulfillments: int = 0
+        self._prev_reservation_expirations:  int = 0
         # RNG for generating unique schedule seeds on each reset.
         # Worker rank (self._init_seed) controls the sequence, but each
         # episode draws a fresh seed so the agent sees diverse schedules.
@@ -354,6 +358,8 @@ class AirportEnv(gym.Env):
         self._abandoned_task_ids    = set()
         self._conflict_terminated   = False
         self._abandoned_task_ids:  set[str] = set()
+        self._prev_reservation_fulfillments = 0
+        self._prev_reservation_expirations  = 0
 
         # Run to the first decision point
         self._advance_to_decision()
@@ -747,6 +753,22 @@ class AirportEnv(gym.Env):
                 )
                 dep_reward += REWARD_ABANDONMENT * max(0.0, time_spent)
                 self._abandoned_task_ids.add(task_id)
+
+        # Signal 7: reservation fulfillment bonus (+1.0 per auto-assignment)
+        new_fulfillments = (
+            self.dispatcher.reservation_fulfillments - self._prev_reservation_fulfillments
+        )
+        if new_fulfillments > 0:
+            dep_reward += REWARD_FULFILLED_RESERVATION * new_fulfillments
+            self._prev_reservation_fulfillments = self.dispatcher.reservation_fulfillments
+
+        # Signal 8: reservation expiry penalty (-0.5 per expired reservation)
+        new_expirations = (
+            self.dispatcher.reservation_expirations - self._prev_reservation_expirations
+        )
+        if new_expirations > 0:
+            dep_reward += REWARD_EXPIRED_RESERVATION * new_expirations
+            self._prev_reservation_expirations = self.dispatcher.reservation_expirations
 
         return delay_reward, dep_reward
 
