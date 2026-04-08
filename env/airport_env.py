@@ -211,6 +211,10 @@ class AirportEnv(gym.Env):
         self._prev_conflict_count: int  = 0
         self._departed_ids:    set[str] = set()
         self._conflict_terminated: bool = False
+        # RNG for generating unique schedule seeds on each reset.
+        # Worker rank (self._init_seed) controls the sequence, but each
+        # episode draws a fresh seed so the agent sees diverse schedules.
+        self._rng = np.random.default_rng(self._init_seed)
 
     # ── Public Gymnasium API ──────────────────────────────────────────────────
 
@@ -229,7 +233,13 @@ class AirportEnv(gym.Env):
 
         if self.randomise:
             from env.random_schedule import generate_schedule
-            effective_seed = seed if seed is not None else self._init_seed
+            if seed is not None:
+                effective_seed = seed
+            else:
+                # CRITICAL: each reset must produce a different schedule.
+                # self._rng is seeded by worker rank so sequences are
+                # reproducible per-worker but non-trivial across episodes.
+                effective_seed = int(self._rng.integers(0, 2**31 - 1))
             aircraft_list  = generate_schedule(seed=effective_seed, density=self.density)
             ft = sum(1 for v in fleet if v.vehicle_type == "fuel_truck")
             bt = sum(1 for v in fleet if v.vehicle_type == "baggage_tug")
