@@ -154,7 +154,7 @@ def main() -> None:
     models_cb = CheckpointCallback(
         save_freq=max(1, MODELS_FREQ // args.n_envs),
         save_path=MODELS_DIR,
-        name_prefix="session5_fixed_step",
+        name_prefix="v5_2m_step",
         verbose=1,
     )
     eval_cb = AirportEvalCallback(
@@ -178,7 +178,7 @@ def main() -> None:
         reset_num_timesteps=(args.resume is None),
     )
 
-    final_path = os.path.join(MODELS_DIR, "session5_fixed")
+    final_path = os.path.join(MODELS_DIR, "v5_2m_final")
     model.save(final_path)
     print(f"\nTraining complete. Final model saved to {final_path}.zip")
 
