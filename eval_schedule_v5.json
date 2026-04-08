@@ -1,0 +1,139 @@
+[
+  {
+    "flight_id": "RND02",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 248.0,
+    "scheduled_departure": 469.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND03",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 288.0,
+    "scheduled_departure": 550.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND04",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 381.0,
+    "scheduled_departure": 687.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND05",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 468.0,
+    "scheduled_departure": 1094.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND06",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 557.0,
+    "scheduled_departure": 1331.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND07",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 644.0,
+    "scheduled_departure": 1047.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND08",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 655.0,
+    "scheduled_departure": 1629.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND09",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 687.0,
+    "scheduled_departure": 817.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND11",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 4271.0,
+    "scheduled_departure": 5273.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND12",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 4387.0,
+    "scheduled_departure": 4957.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND13",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 4504.0,
+    "scheduled_departure": 4814.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND14",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 4581.0,
+    "scheduled_departure": 4672.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND15",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 4592.0,
+    "scheduled_departure": 4921.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND16",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 4631.0,
+    "scheduled_departure": 4914.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND17",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 4648.0,
+    "scheduled_departure": 5237.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND18",
+    "aircraft_type": "A320",
+    "scheduled_arrival": 4649.0,
+    "scheduled_departure": 4721.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND19",
+    "aircraft_type": "B777",
+    "scheduled_arrival": 4731.0,
+    "scheduled_departure": 5568.0,
+    "state": "APPROACHING"
+  },
+  {
+    "flight_id": "RND10",
+    "aircraft_type": "B777",
+    "scheduled_arrival": Infinity,
+    "scheduled_departure": 787.0,
+    "state": "AT_GATE",
+    "assigned_gate": "A2",
+    "position": "GATE_A2"
+  },
+  {
+    "flight_id": "RND01",
+    "aircraft_type": "B777",
+    "scheduled_arrival": Infinity,
+    "scheduled_departure": 1196.0,
+    "state": "AT_GATE",
+    "assigned_gate": "B2",
+    "position": "GATE_B2"
+  }
+]

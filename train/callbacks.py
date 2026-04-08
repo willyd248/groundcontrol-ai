@@ -3,7 +3,7 @@ callbacks.py — Custom SB3 callbacks for airport PPO training.
 
 AirportEvalCallback:
   Every `eval_freq` timesteps:
-    1. Runs the current policy deterministically on a fixed eval schedule (seed=42).
+    1. Runs the current policy deterministically on a fixed eval schedule (seed=6, v5).
     2. Runs the FCFS baseline on the same schedule (cached after first run).
     3. Logs both sets of metrics + deltas to TensorBoard.
 
@@ -111,7 +111,7 @@ class AirportEvalCallback(BaseCallback):
     def __init__(
         self,
         eval_freq: int = 50_000,
-        eval_seed: int = 42,
+        eval_seed: int = 6,
         verbose: int = 1,
     ) -> None:
         super().__init__(verbose)

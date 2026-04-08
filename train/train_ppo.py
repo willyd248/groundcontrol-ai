@@ -51,7 +51,7 @@ TOTAL_TIMESTEPS    = 2_000_000
 CHECKPOINT_FREQ    = 50_000     # recovery checkpoints — every N timesteps (total)
 MODELS_FREQ        = 250_000    # official model snapshots — every N timesteps (total)
 EVAL_FREQ          = 50_000     # evaluate vs FCFS every N timesteps
-EVAL_SEED          = 42
+EVAL_SEED          = 6     # v5 eval seed (28% suboptimality, 131 min FCFS delay)
 
 CHECKPOINT_DIR     = "checkpoints"   # frequent recovery saves
 MODELS_DIR         = "models"        # official release checkpoints
