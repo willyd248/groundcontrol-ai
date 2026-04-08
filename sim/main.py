@@ -31,6 +31,7 @@ def build_fleet():
     return [
         FuelTruck(vehicle_id="FT1", position="DEPOT"),
         FuelTruck(vehicle_id="FT2", position="DEPOT"),
+        FuelTruck(vehicle_id="FT3", position="DEPOT"),
         BaggageTug(vehicle_id="BT1", position="DEPOT"),
         BaggageTug(vehicle_id="BT2", position="DEPOT"),
         BaggageTug(vehicle_id="BT3", position="DEPOT"),
