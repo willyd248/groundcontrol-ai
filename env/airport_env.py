@@ -176,7 +176,7 @@ REWARD_CONFLICT_TERMINAL       = -200.0 # lump-sum on the tick that produces the
 REWARD_PENDING_AT_TIMEOUT      = -20.0  # per flight still pending at truncation
 REWARD_ABANDONMENT             = -1.0   # per minute of service time wasted on an abandoned task
 REWARD_FULFILLED_RESERVATION   = +1.0   # Signal 7: reservation auto-assigned successfully
-REWARD_EXPIRED_RESERVATION     = -0.5   # Signal 8: reservation expired unused
+REWARD_EXPIRED_RESERVATION     = -1.0   # Signal 8: reservation expired unused (tuned from -0.5, Phase 2, HEALTHY verdict)
 
 # Safety limit: max sim-ticks between decision points before we force a return
 MAX_TICKS_PER_STEP = 3600          # 1 sim-hour
