@@ -10,10 +10,19 @@ from sim.entities import (
 )
 
 
-def load_schedule(path: str | Path) -> list[Aircraft]:
+def load_schedule(
+    path: str | Path,
+    gates: dict | None = None,
+) -> list[Aircraft]:
     """
     Parse schedule.json and return a list of Aircraft sorted by
     scheduled_arrival (then scheduled_departure for dep-only flights).
+
+    Args:
+        path: Path to schedule JSON file.
+        gates: Optional gate registry (gate_id → Gate). When provided,
+               departure-only flights are pre-assigned to gates round-robin.
+               When None, falls back to the default KFIC 6-gate layout.
 
     JSON schema per flight:
     {
@@ -25,8 +34,18 @@ def load_schedule(path: str | Path) -> list[Aircraft]:
         "is_departure_only": false       // no arrival (pre-positioned)
     }
     """
+    # Build gate lists for dep-only pre-assignment
+    if gates is not None:
+        gate_ids = sorted(gates.keys())
+        gate_nodes = [gates[gid].position_node for gid in gate_ids]
+    else:
+        # Default KFIC gates (backwards compatible)
+        gate_ids = ["A1", "A2", "A3", "B1", "B2", "B3"]
+        gate_nodes = ["GATE_A1", "GATE_A2", "GATE_A3", "GATE_B1", "GATE_B2", "GATE_B3"]
+
     data = json.loads(Path(path).read_text())
     aircraft_list: list[Aircraft] = []
+    dep_only_idx = 0
 
     for rec in data:
         atype = rec.get("aircraft_type", "B737")
@@ -69,6 +88,14 @@ def load_schedule(path: str | Path) -> list[Aircraft]:
             service_requirements=reqs,
             state=initial_state,
         )
+
+        if dep_only and gate_ids:
+            # Pre-assign gate + position so the dispatcher can find the aircraft
+            idx = dep_only_idx % len(gate_ids)
+            ac.assigned_gate = gate_ids[idx]
+            ac.position = gate_nodes[idx]
+            dep_only_idx += 1
+
         aircraft_list.append(ac)
 
     aircraft_list.sort(key=lambda a: (a.scheduled_arrival, a.scheduled_departure))

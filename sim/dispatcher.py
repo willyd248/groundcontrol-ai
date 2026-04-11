@@ -415,6 +415,8 @@ class Dispatcher:
             self.tasks_started += 1
 
     def _find_nearest_vehicle(self, service_type: str, gate_node: str) -> Vehicle | None:
+        if gate_node is None or gate_node not in self.G:
+            return None
         candidates = []
         for v in self.vehicles.values():
             if not v.is_available():
@@ -429,13 +431,13 @@ class Dispatcher:
                 continue
             try:
                 cost = nx.shortest_path_length(self.G, v.position, gate_node, weight="weight")
-                candidates.append((cost, v))
+                candidates.append((cost, v.vehicle_id, v))
             except nx.NetworkXNoPath:
                 continue
         if not candidates:
             return None
-        candidates.sort(key=lambda x: x[0])
-        return candidates[0][1]
+        candidates.sort(key=lambda x: (x[0], x[1]))
+        return candidates[0][2]
 
     # -----------------------------------------------------------------------
     # 8. Advance vehicles one node per tick toward destination

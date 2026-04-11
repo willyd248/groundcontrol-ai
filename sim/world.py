@@ -19,6 +19,7 @@ Runways:
 
 from __future__ import annotations
 import networkx as nx
+from pathlib import Path
 from sim.entities import Gate, Runway, RunwayState
 
 # ---------------------------------------------------------------------------
@@ -216,3 +217,122 @@ def is_segment_free(G: nx.DiGraph, u: str, v: str) -> bool:
 
 class ConflictError(Exception):
     pass
+
+
+# ---------------------------------------------------------------------------
+# JSON graph loader (for real airport data, e.g. OSM-extracted KAUS)
+# ---------------------------------------------------------------------------
+
+def load_taxiway_graph_from_json(path: str | Path) -> nx.DiGraph:
+    """
+    Load a taxiway graph from a JSON file produced by data/parse_osm_taxiways.py.
+
+    JSON schema:
+    {
+        "nodes": [{"id": str, "node_type": str, "pos": [lon, lat], "label": str}, ...],
+        "edges": [{"source": str, "target": str, "length": float, "weight": float}, ...]
+    }
+
+    Returns a networkx DiGraph compatible with the dispatcher:
+      - Each node has: node_type, pos, label
+      - Each edge has: length, weight, occupied_by (initialized to None)
+
+    Raises ValueError if the graph lacks required entity types.
+    """
+    import json
+    data = json.loads(Path(path).read_text())
+
+    G = nx.DiGraph()
+
+    for node in data["nodes"]:
+        G.add_node(
+            node["id"],
+            node_type=node["node_type"],
+            pos=tuple(node["pos"]),
+            label=node.get("label", ""),
+        )
+
+    for edge in data["edges"]:
+        G.add_edge(
+            edge["source"],
+            edge["target"],
+            length=edge["length"],
+            weight=edge["weight"],
+            occupied_by=None,
+        )
+
+    # Validate required entity types
+    node_types = {d.get("node_type") for _, d in G.nodes(data=True)}
+    gates = [n for n, d in G.nodes(data=True) if d.get("node_type") == "gate"]
+    rwy_entries = [n for n, d in G.nodes(data=True) if d.get("node_type") == "runway_entry"]
+    depots = [n for n, d in G.nodes(data=True) if d.get("node_type") == "depot"]
+
+    if not gates:
+        raise ValueError(f"Graph at {path} has no gate nodes (node_type='gate')")
+    if not rwy_entries:
+        raise ValueError(f"Graph at {path} has no runway entry nodes (node_type='runway_entry')")
+    if not depots:
+        raise ValueError(f"Graph at {path} has no depot nodes (node_type='depot')")
+
+    return G
+
+
+def build_gates_from_graph(G: nx.DiGraph) -> dict[str, Gate]:
+    """Build a gate registry from gate nodes in a loaded graph."""
+    gates = {}
+    for node, data in G.nodes(data=True):
+        if data.get("node_type") != "gate":
+            continue
+        label = data.get("label", "")
+        # Derive gate_id and terminal from node name
+        # Expected format: GATE_<terminal><number> or GATE_<number>
+        gate_id = node.replace("GATE_", "")
+        # Infer terminal from first character if it's a letter
+        if gate_id and gate_id[0].isalpha():
+            terminal = gate_id[0]
+        else:
+            terminal = "T"  # default terminal
+        gates[gate_id] = Gate(gate_id, terminal, node)
+    return gates
+
+
+def build_runways_from_graph(G: nx.DiGraph) -> dict[str, Runway]:
+    """Build a runway registry from runway_entry nodes in a loaded graph.
+
+    Expects nodes named RWY_<id>_ENTRY with corresponding RWY_<id>_EXIT nodes
+    or nearest intersection as exit.
+    """
+    entries = {}
+    exits = {}
+    for node, data in G.nodes(data=True):
+        if data.get("node_type") == "runway_entry":
+            if "_ENTRY" in node:
+                rwy_id = node.replace("RWY_", "").replace("_ENTRY", "")
+                entries[rwy_id] = node
+            elif "_EXIT" in node:
+                rwy_id = node.replace("RWY_", "").replace("_EXIT", "")
+                exits[rwy_id] = node
+
+    runways = {}
+    for rwy_id, entry_node in entries.items():
+        exit_node = exits.get(rwy_id)
+        if exit_node is None:
+            # Find nearest intersection as exit
+            best_node = None
+            best_cost = float("inf")
+            for n, d in G.nodes(data=True):
+                if d.get("node_type") == "intersection" and G.has_edge(n, entry_node):
+                    cost = G[n][entry_node].get("weight", float("inf"))
+                    if cost < best_cost:
+                        best_cost = cost
+                        best_node = n
+            exit_node = best_node or entry_node
+
+        runways[rwy_id] = Runway(
+            runway_id=rwy_id,
+            active_direction=rwy_id,
+            entry_node=entry_node,
+            exit_node=exit_node,
+        )
+
+    return runways

@@ -315,6 +315,47 @@ def test_full_run_no_conflicts():
         os.unlink(fname)
 
 
+def test_find_nearest_vehicle_returns_float_cost():
+    """shortest_path_length must return a float, not a dict.
+    Regression: when gate_node was None, nx.shortest_path_length returned
+    a dict of all targets, causing sort to crash with TypeError.
+    """
+    import networkx as nx
+    d = make_dispatcher()
+    G = d.G
+    # Verify shortest_path_length returns float for a valid target
+    cost = nx.shortest_path_length(G, "DEPOT", "GATE_A1", weight="weight")
+    assert isinstance(cost, float), f"Expected float, got {type(cost)}"
+
+    # Verify _find_nearest_vehicle handles None gate_node gracefully
+    result = d._find_nearest_vehicle("fuel", None)
+    assert result is None, "Should return None for None gate_node"
+
+    # Verify _find_nearest_vehicle handles non-existent gate_node gracefully
+    result = d._find_nearest_vehicle("fuel", "NONEXISTENT_NODE")
+    assert result is None, "Should return None for non-existent gate_node"
+
+
+def test_find_nearest_vehicle_tiebreak():
+    """When two vehicles have equal cost, sort must not crash on Vehicle comparison."""
+    ac = make_aircraft(arr=0.0, dep=7200.0)
+    ac.state = AircraftState.AT_GATE
+    ac.assigned_gate = "A1"
+    ac.position = "GATE_A1"
+    # Two fuel trucks at same position
+    fleet = [
+        FuelTruck(vehicle_id="FT1", position="DEPOT"),
+        FuelTruck(vehicle_id="FT2", position="DEPOT"),
+        BaggageTug(vehicle_id="BT1", position="DEPOT"),
+        PushbackTractor(vehicle_id="PB1", position="DEPOT"),
+    ]
+    d = make_dispatcher(aircraft=[ac], fleet=fleet)
+    # Should not crash even though FT1 and FT2 have same cost
+    result = d._find_nearest_vehicle("fuel", "GATE_A1")
+    assert result is not None
+    assert result.vehicle_id in ("FT1", "FT2")
+
+
 def test_full_run_flights_eventually_depart():
     """At least some flights should depart within the sim window."""
     from sim.scheduler import load_schedule
