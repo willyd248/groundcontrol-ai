@@ -18,7 +18,8 @@ observed value. If any item shows FAIL, fix it before training.
   - File: `env/airport_env.py` → `AirportEnv.__init__` default, `env/random_schedule.py` → `generate_schedule` default
 
 - [ ] **Observation space** matches fleet size
-  - Expected: OBS_DIM=258 (with MAX_VEHICLES=4)
+  - Expected: OBS_DIM=337 (with MAX_VEHICLES=4, post-anticipation upgrade)
+  - Note: Updated from 258 → 337 post-anticipation upgrade (+79 dims total). Breakdown of new dims: +4 vehicle is_reserved (1 per vehicle × 4 vehicles), +72 anticipated-task slots (MAX_ANTICIPATED=8 × ANT_FEATURES=9), +3 global anticipation scalars (n_anticipated_norm, n_anticipated_beyond_norm, n_reservations_norm). Steps 2-5.
   - Verify: `python3 -c "from env.airport_env import OBS_DIM; print(OBS_DIM)"`
 
 ---
