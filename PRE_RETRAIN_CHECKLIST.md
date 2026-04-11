@@ -123,10 +123,10 @@ observed value. If any item shows FAIL, fix it before training.
   - Verify: in `sim/dispatcher.py` → `_update_anticipated_tasks()`, reserved vehicle is converted to ServiceTask and removed from anticipated_tasks before pending queue processes new arrivals
   - FAIL condition: a reserved vehicle ends up idle while the same flight's task sits in pending queue
 
-- [ ] **Silent conversion does NOT increment `decision_query_count`**
-  - Reservation auto-conversion is handled by the dispatcher, not the RL agent — it must not trigger an agent decision query
-  - Verify: `test_reservation_conversion_priority` in `tests/test_anticipated.py` passes
-  - File: `sim/dispatcher.py` → conversion path does not call `_decision_query()`
+- [ ] **Silent conversion does NOT trigger an agent query cycle**
+  - Reservation auto-conversion is handled entirely inside `RLDispatcher._create_service_tasks()` — the task is moved from pending to active before control returns to the env, so no additional agent decision point is created
+  - Verify: `test_silent_conversion_no_extra_agent_query` in `tests/test_anticipated.py` must pass before any retrain. The test asserts this by confirming no additional decision points are created when a reservation auto-converts.
+  - File: `env/airport_env.py` → `RLDispatcher._create_service_tasks()` override (conversion is inline, not via agent step)
 
 - [ ] **Reservation expiry fires correctly**
   - When a reservation's anticipated task expires (aircraft departs or window closes), `vehicle.reserved_for` is cleared and `REWARD_EXPIRED_RESERVATION` fires
