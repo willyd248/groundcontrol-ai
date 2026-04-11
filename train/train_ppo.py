@@ -2,9 +2,11 @@
 train_ppo.py — Train a MaskablePPO agent on the AirportEnv.
 
 Usage:
-    python -m train.train_ppo                      # 1M steps, default config
-    python -m train.train_ppo --timesteps 500000   # custom total steps
-    python -m train.train_ppo --resume checkpoints/airport_ppo_500000_steps
+    python -m train.train_ppo                                      # 2M steps, default prefix
+    python -m train.train_ppo --timesteps 500000                   # custom total steps
+    python -m train.train_ppo --name-prefix v5_anticipation        # named run
+    python -m train.train_ppo --resume checkpoints/v5_2m/v5_2m_recovery_500000_steps
+    python -m train.train_ppo --name-prefix my_run --force-overwrite  # overwrite existing
 
 Configuration (hard-coded per spec):
     n_envs       = 8
@@ -15,21 +17,22 @@ Configuration (hard-coded per spec):
     gamma        = 0.99
     clip_range   = 0.2
     ent_coef     = 0.01
-    total_timesteps = 1_000_000
+    total_timesteps = 2_000_000
 
-Outputs:
-    checkpoints/airport_ppo_{N}_steps.zip          every 50k steps (recovery)
-    models/session5_fixed_step_{N}.zip             every 250k steps (official)
-    models/session5_fixed.zip                      final model
-    runs/AirportPPO_*/                             TensorBoard logs
+Outputs (all paths use --name-prefix):
+    checkpoints/{prefix}/{prefix}_recovery_{N}_steps.zip   every 50k steps (recovery)
+    models/{prefix}_step_{N}_steps.zip                     every 250k steps (official)
+    models/{prefix}_final.zip                              final model
+    runs/AirportPPO_*/                                     TensorBoard logs
 """
 
 from __future__ import annotations
 
 import argparse
+import glob
 import os
+import sys
 
-from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList, BaseCallback
 from sb3_contrib import MaskablePPO
@@ -52,6 +55,7 @@ CHECKPOINT_FREQ    = 50_000     # recovery checkpoints — every N timesteps (to
 MODELS_FREQ        = 250_000    # official model snapshots — every N timesteps (total)
 EVAL_FREQ          = 50_000     # evaluate vs FCFS every N timesteps
 EVAL_SEED          = 6     # v5 eval seed (28% suboptimality, 131 min FCFS delay)
+MODEL_NAME_PREFIX  = "v5_2m"            # prefix for model snapshots (default; override with --name-prefix)
 
 CHECKPOINT_DIR     = "checkpoints"   # frequent recovery saves
 MODELS_DIR         = "models"        # official release checkpoints
@@ -100,7 +104,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Train MaskablePPO on AirportEnv")
     parser.add_argument(
         "--timesteps", type=int, default=TOTAL_TIMESTEPS,
-        help="Total training timesteps (default: 1_000_000)",
+        help="Total training timesteps (default: 2_000_000)",
     )
     parser.add_argument(
         "--resume", type=str, default=None,
@@ -110,11 +114,46 @@ def main() -> None:
         "--n-envs", type=int, default=N_ENVS,
         help="Number of parallel envs (default: 8)",
     )
+    parser.add_argument(
+        "--name-prefix", type=str, default=MODEL_NAME_PREFIX,
+        help=f"Prefix for all checkpoint and model snapshot files (default: {MODEL_NAME_PREFIX})",
+    )
+    parser.add_argument(
+        "--force-overwrite", action="store_true",
+        help="Allow overwriting existing checkpoints with the same name prefix",
+    )
     args = parser.parse_args()
 
-    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    recovery_dir = os.path.join(CHECKPOINT_DIR, args.name_prefix)
+    os.makedirs(recovery_dir, exist_ok=True)
     os.makedirs(MODELS_DIR, exist_ok=True)
     os.makedirs(TENSORBOARD_LOG, exist_ok=True)
+
+    # ── Startup print — resolved checkpoint paths ─────────────────────────────
+    print(f"\n{'='*60}")
+    print(f"CHECKPOINT CONFIGURATION")
+    print(f"  Name prefix:          {args.name_prefix}")
+    print(f"  Recovery checkpoints: {os.path.abspath(recovery_dir)}/")
+    print(f"  Milestone snapshots:  {os.path.abspath(MODELS_DIR)}/{args.name_prefix}_step_*.zip")
+    print(f"  Final model:          {os.path.abspath(MODELS_DIR)}/{args.name_prefix}_final.zip")
+    print(f"  Working directory:    {os.getcwd()}")
+    print(f"{'='*60}\n")
+
+    # ── Collision detection ───────────────────────────────────────────────────
+    existing_collisions = (
+        glob.glob(os.path.join(MODELS_DIR, f"{args.name_prefix}_step_*.zip")) +
+        glob.glob(os.path.join(MODELS_DIR, f"{args.name_prefix}_final.zip"))
+    )
+    if existing_collisions and not args.force_overwrite:
+        print(f"\n{'!'*60}")
+        print(f"COLLISION DETECTED — existing files match this run's pattern:")
+        for f in sorted(existing_collisions):
+            print(f"  {os.path.abspath(f)}")
+        print(f"\nRefusing to start. Pass --force-overwrite to proceed.")
+        print(f"{'!'*60}\n")
+        sys.exit(1)
+    elif existing_collisions:
+        print(f"WARNING: --force-overwrite active. {len(existing_collisions)} existing file(s) will be overwritten.")
 
     # ── Build vectorised env ─────────────────────────────────────────────────
     vec_env = VecMonitor(SubprocVecEnv([_make_env(i) for i in range(args.n_envs)]))
@@ -146,15 +185,15 @@ def main() -> None:
     # Recovery checkpoints — frequent, for resuming interrupted runs
     checkpoint_cb = CheckpointCallback(
         save_freq=max(1, CHECKPOINT_FREQ // args.n_envs),
-        save_path=CHECKPOINT_DIR,
-        name_prefix="airport_ppo",
+        save_path=recovery_dir,
+        name_prefix=f"{args.name_prefix}_recovery",
         verbose=1,
     )
-    # Official model snapshots — every 250k steps for policy health comparison
+    # Official model snapshots — every MODELS_FREQ steps
     models_cb = CheckpointCallback(
         save_freq=max(1, MODELS_FREQ // args.n_envs),
         save_path=MODELS_DIR,
-        name_prefix="v5_2m_step",
+        name_prefix=f"{args.name_prefix}_step",
         verbose=1,
     )
     eval_cb = AirportEvalCallback(
@@ -168,7 +207,7 @@ def main() -> None:
     # ── Train ────────────────────────────────────────────────────────────────
     print(
         f"\nTraining MaskablePPO — {args.timesteps:,} steps | "
-        f"{args.n_envs} envs | checkpoints → {CHECKPOINT_DIR}/ | "
+        f"{args.n_envs} envs | checkpoints → {recovery_dir}/ | "
         f"TensorBoard → {TENSORBOARD_LOG}/\n"
     )
     model.learn(
@@ -178,7 +217,7 @@ def main() -> None:
         reset_num_timesteps=(args.resume is None),
     )
 
-    final_path = os.path.join(MODELS_DIR, "v5_2m_final")
+    final_path = os.path.join(MODELS_DIR, f"{args.name_prefix}_final")
     model.save(final_path)
     print(f"\nTraining complete. Final model saved to {final_path}.zip")
 
