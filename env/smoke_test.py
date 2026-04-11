@@ -14,19 +14,39 @@ from __future__ import annotations
 import sys
 import numpy as np
 
-from env.airport_env import AirportEnv, OBS_DIM, ACTION_HOLD
+from env.airport_env import AirportEnv, OBS_DIM, ACTION_HOLD, MAX_TASKS, MAX_ANTICIPATED
 
 
 N_STEPS    = 200
 N_EPISODES = 2
 
+# Action index ranges
+ASSIGN_START     = 0
+ASSIGN_END       = MAX_TASKS          # exclusive
+RESERVE_START    = MAX_TASKS
+RESERVE_END      = MAX_TASKS + MAX_ANTICIPATED  # exclusive = ACTION_HOLD
+
+
+def _label(action: int) -> str:
+    if action == ACTION_HOLD:
+        return "HOLD"
+    if RESERVE_START <= action < RESERVE_END:
+        return f"reserve ant[{action - RESERVE_START}]"
+    return f"assign task[{action}]"
+
 
 def main() -> None:
     print("=" * 60)
-    print("  AirportEnv smoke test")
+    print("  AirportEnv smoke test (anticipation-aware)")
     print("=" * 60)
+    print(f"  OBS_DIM      : {OBS_DIM}")
+    print(f"  action_space : Discrete({ACTION_HOLD + 1})")
+    print(f"  assign range : 0–{ASSIGN_END - 1}")
+    print(f"  reserve range: {RESERVE_START}–{RESERVE_END - 1}")
+    print(f"  HOLD         : {ACTION_HOLD}")
 
-    total_ok = True
+    total_ok       = True
+    reserve_seen   = 0
 
     for ep in range(N_EPISODES):
         print(f"\n── Episode {ep + 1} (randomise={ep > 0}) ──")
@@ -40,16 +60,21 @@ def main() -> None:
         # Shape checks
         assert obs.shape == (OBS_DIM,), f"Bad obs shape: {obs.shape}"
         assert obs.dtype == np.float32,  "Obs dtype must be float32"
+        assert env.action_space.n == ACTION_HOLD + 1, \
+            f"action_space.n should be {ACTION_HOLD + 1}, got {env.action_space.n}"
 
         ep_reward = 0.0
         for step in range(N_STEPS):
             mask = env.action_masks()
             assert mask.shape == (env.action_space.n,), f"Bad mask shape: {mask.shape}"
-            assert mask[ACTION_HOLD], "Hold action must always be valid"
+            assert mask.any(), "At least one action must be valid (HOLD when no work, assign/reserve otherwise)"
 
             # Pick a random valid action
             valid_actions = np.where(mask)[0]
             action = int(np.random.choice(valid_actions))
+
+            if RESERVE_START <= action < RESERVE_END:
+                reserve_seen += 1
 
             obs, reward, terminated, truncated, info = env.step(action)
 
@@ -59,12 +84,12 @@ def main() -> None:
             )
 
             ep_reward += reward
-            action_label = "HOLD" if action == ACTION_HOLD else f"assign task[{action}]"
+            n_ant = info.get("n_anticipated_tasks", "?")
             print(
-                f"  step {step:4d} | {action_label:<18s} | "
-                f"reward {reward:+7.2f} | pending={info['n_pending_tasks']} | "
-                f"departed={info['flights_departed']} | "
-                f"sim_t={info['sim_time']:.0f}s"
+                f"  step {step:4d} | {_label(action):<22s} | "
+                f"reward {reward:+7.2f} | pending={info['n_pending_tasks']} "
+                f"| ant={n_ant} | departed={info['flights_departed']} "
+                f"| sim_t={info['sim_time']:.0f}s"
             )
 
             if terminated or truncated:
@@ -80,6 +105,12 @@ def main() -> None:
             total_ok = False
 
     env.close()
+
+    print()
+    print(f"  Reservation actions taken across all episodes: {reserve_seen}")
+    if reserve_seen == 0:
+        print("  NOTE: no reservation actions were exercised (may be expected with small schedule)")
+
     print()
     if total_ok:
         print("smoke_test: ALL PASSED")

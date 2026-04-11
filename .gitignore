@@ -3,3 +3,16 @@
 node_modules/
 .env
 .env.local
+.vercel
+
+# Training artifacts (large binaries — documented in models/README.md instead)
+checkpoints/
+models/*.zip
+runs/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Claude Code worktrees and session state
+.claude/
