@@ -196,3 +196,114 @@ Seed 19 episode: 83 decisions — 78 assignments (94%), 5 reservations (6.0%), 0
 - [ ] Reservation rate <3%: [NO] (actual: 6.7%)
 - [ ] Hard battery worse than v5 at same milestone: [NO]
 - [ ] Reward trending down 2 consecutive milestones: [NO]
+
+
+## Milestone: 1M steps (overnight eval 2026-04-11)
+
+### Hard Battery (seeds [6, 10, 19, 40, 42])
+| Seed | FCFS delay | RL delay | Gap | Res rate |
+|------|-----------|---------|------|----------|
+| 6 | 102.5m | 102.4m | -0.1m | 0.0% |
+| 10 | 137.6m | 138.0m | +0.4m | 1.3% |
+| 19 | 170.2m | 170.6m | +0.4m | 0.0% |
+| 40 | 87.0m | 87.1m | +0.1m | 0.0% |
+| 42 | 133.7m | 134.1m | +0.4m | 0.0% |
+| Mean | | | +0.2m | 0.3% |
+
+**Wins:** 0/5  **Mean delta (FCFS-RL):** -0.2m
+
+### Training Metrics (from TensorBoard @ step 1,000,000)
+- ep_rew_mean: 32.4
+- explained_variance: 0.848
+- clip_fraction: 0.044
+- entropy_loss: -0.430
+
+---
+
+## Milestone: 1.25M steps (overnight eval 2026-04-11)
+
+### Hard Battery (seeds [6, 10, 19, 40, 42])
+| Seed | FCFS delay | RL delay | Gap | Res rate |
+|------|-----------|---------|------|----------|
+| 6 | 102.5m | 102.4m | -0.1m | 0.0% |
+| 10 | 137.6m | 138.1m | +0.5m | 0.0% |
+| 19 | 170.2m | 170.8m | +0.6m | 0.0% |
+| 40 | 87.0m | 87.1m | +0.1m | 0.0% |
+| 42 | 133.7m | 134.1m | +0.4m | 0.0% |
+| Mean | | | +0.3m | 0.0% |
+
+**Wins:** 0/5  **Mean delta (FCFS-RL):** -0.3m
+
+### Training Metrics (from TensorBoard @ step 1,250,000)
+- ep_rew_mean: 37.9
+- explained_variance: 0.860
+- clip_fraction: 0.039
+- entropy_loss: -0.409
+
+---
+
+## Milestone: 1.5M steps (overnight eval 2026-04-11)
+
+### Hard Battery (seeds [6, 10, 19, 40, 42])
+| Seed | FCFS delay | RL delay | Gap | Res rate |
+|------|-----------|---------|------|----------|
+| 6 | 102.5m | 102.4m | -0.1m | 0.0% |
+| 10 | 137.6m | 137.7m | +0.1m | 1.3% |
+| 19 | 170.2m | 161.7m | -8.5m | 0.0% |
+| 40 | 87.0m | 87.1m | +0.1m | 0.0% |
+| 42 | 133.7m | 134.1m | +0.4m | 0.0% |
+| Mean | | | -1.6m | 0.3% |
+
+**Wins:** 1/5  **Mean delta (FCFS-RL):** +1.6m
+
+### Training Metrics (from TensorBoard @ step 1,500,000)
+- ep_rew_mean: 36.2
+- explained_variance: 0.875
+- clip_fraction: 0.049
+- entropy_loss: -0.390
+
+---
+
+## Milestone: 1.75M steps (overnight eval 2026-04-11)
+
+### Hard Battery (seeds [6, 10, 19, 40, 42])
+| Seed | FCFS delay | RL delay | Gap | Res rate |
+|------|-----------|---------|------|----------|
+| 6 | 102.5m | 102.4m | -0.1m | 0.0% |
+| 10 | 137.6m | 138.2m | +0.6m | 2.6% |
+| 19 | 170.2m | 170.6m | +0.4m | 0.0% |
+| 40 | 87.0m | 87.1m | +0.1m | 0.0% |
+| 42 | 133.7m | 134.1m | +0.4m | 0.0% |
+| Mean | | | +0.3m | 0.5% |
+
+**Wins:** 0/5  **Mean delta (FCFS-RL):** -0.3m
+
+### Training Metrics (from TensorBoard @ step 1,750,000)
+- ep_rew_mean: 42.4
+- explained_variance: 0.865
+- clip_fraction: 0.042
+- entropy_loss: -0.379
+
+---
+
+## Milestone: 2M steps (overnight eval 2026-04-11)
+
+### Hard Battery (seeds [6, 10, 19, 40, 42])
+| Seed | FCFS delay | RL delay | Gap | Res rate |
+|------|-----------|---------|------|----------|
+| 6 | 102.5m | 102.4m | -0.1m | 0.0% |
+| 10 | 137.6m | 137.9m | +0.3m | 0.0% |
+| 19 | 170.2m | 161.7m | -8.5m | 0.0% |
+| 40 | 87.0m | 87.1m | +0.1m | 0.0% |
+| 42 | 133.7m | 134.0m | +0.3m | 0.0% |
+| Mean | | | -1.6m | 0.0% |
+
+**Wins:** 1/5  **Mean delta (FCFS-RL):** +1.6m
+
+### Training Metrics (from TensorBoard @ step 2,000,000)
+- ep_rew_mean: 43.2
+- explained_variance: 0.871
+- clip_fraction: 0.050
+- entropy_loss: -0.354
+
+---
