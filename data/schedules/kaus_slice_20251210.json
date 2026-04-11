@@ -1,0 +1,322 @@
+[
+  {
+    "flight_id": "KAUS001",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 180,
+    "scheduled_departure": null,
+    "is_arrival_only": true,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS002",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 1680,
+    "scheduled_departure": null,
+    "is_arrival_only": true,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS003",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 2580,
+    "scheduled_departure": null,
+    "is_arrival_only": true,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS004",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 3540,
+    "scheduled_departure": null,
+    "is_arrival_only": true,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS005",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 24780,
+    "scheduled_departure": 27600,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS006",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 28200,
+    "scheduled_departure": 30600,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS007",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 29100,
+    "scheduled_departure": 31500,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS008",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 29400,
+    "scheduled_departure": 31800,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS009",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 30480,
+    "scheduled_departure": 35940,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS010",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 30660,
+    "scheduled_departure": 35100,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS011",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 30900,
+    "scheduled_departure": 34200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS012",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 31500,
+    "scheduled_departure": 33600,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS013",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 31500,
+    "scheduled_departure": 34200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS014",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 31500,
+    "scheduled_departure": 34200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS015",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 31500,
+    "scheduled_departure": 34200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS016",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 31500,
+    "scheduled_departure": 34800,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS017",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 32100,
+    "scheduled_departure": 34800,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS018",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 32400,
+    "scheduled_departure": 34800,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS019",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 33300,
+    "scheduled_departure": 35700,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS020",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 34800,
+    "scheduled_departure": 37200,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS021",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 34860,
+    "scheduled_departure": 38580,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS022",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 34920,
+    "scheduled_departure": 39000,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS023",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 35100,
+    "scheduled_departure": 37500,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS024",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 35700,
+    "scheduled_departure": 38400,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS025",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 35880,
+    "scheduled_departure": 39240,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS026",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 36000,
+    "scheduled_departure": 38760,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS027",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 36180,
+    "scheduled_departure": 39900,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS028",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 36540,
+    "scheduled_departure": 39540,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS029",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 36900,
+    "scheduled_departure": 39300,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS030",
+    "aircraft_type": "CRJ900",
+    "scheduled_arrival": 37200,
+    "scheduled_departure": 39600,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS031",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 37560,
+    "scheduled_departure": 41760,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS032",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 38460,
+    "scheduled_departure": 41460,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS033",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 38700,
+    "scheduled_departure": 41100,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS034",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 39900,
+    "scheduled_departure": 42300,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS035",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 40080,
+    "scheduled_departure": 44040,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS036",
+    "aircraft_type": "B737",
+    "scheduled_arrival": 40200,
+    "scheduled_departure": 43560,
+    "is_arrival_only": false,
+    "is_departure_only": false
+  },
+  {
+    "flight_id": "KAUS037",
+    "aircraft_type": "B737",
+    "scheduled_arrival": null,
+    "scheduled_departure": 18000,
+    "is_arrival_only": false,
+    "is_departure_only": true
+  },
+  {
+    "flight_id": "KAUS038",
+    "aircraft_type": "B737",
+    "scheduled_arrival": null,
+    "scheduled_departure": 18060,
+    "is_arrival_only": false,
+    "is_departure_only": true
+  },
+  {
+    "flight_id": "KAUS039",
+    "aircraft_type": "B737",
+    "scheduled_arrival": null,
+    "scheduled_departure": 19500,
+    "is_arrival_only": false,
+    "is_departure_only": true
+  },
+  {
+    "flight_id": "KAUS040",
+    "aircraft_type": "B737",
+    "scheduled_arrival": null,
+    "scheduled_departure": 19800,
+    "is_arrival_only": false,
+    "is_departure_only": true
+  }
+]
