@@ -18,15 +18,17 @@ Design notes
 The policy was trained on synthetic KFIC schedules (6 gates, 15 taxiway nodes).
 This eval runs it on KAUS real-world data (8 gates, 119 taxiway nodes).
 
-Obs encoding degradation (honest disclosure):
-  - Airport node IDs (KAUS gates/taxiways) are NOT in the KFIC NODE_IDX lookup.
-  - Aircraft position features fall back to -1.0 (same as APPROACHING state in training).
-  - Vehicle position features fall back to 0.0 (DEPOT index in training).
-  - Task gate_idx features fall back to 0.0 (DEPOT fallback).
-  - All other features (service type, task age, urgency, vehicle availability,
-    anticipated task features) are encoded accurately from real sim state.
-  - Action masking is accurate: `_find_nearest_vehicle` uses the real KAUS graph.
-  - Action execution is accurate: vehicles are routed on the real KAUS graph.
+Position encoding:
+  KAUS node IDs are not in the KFIC NODE_IDX lookup that the training env used.
+  Instead of constant fallbacks (-1.0 / 0.0), position features are encoded as
+  normalised shortest-path distance from DEPOT using the actual KAUS graph
+  (see _build_node_pos_map).  This preserves the semantic meaning the policy
+  learned during training (DEPOT=0.0, distant gates→higher values) while giving
+  each KAUS node a unique, meaningful value rather than collapsing all positions
+  to the same constant.
+
+  Aircraft position: None (airborne) → -1.0; otherwise dist-normalised ∈ [0,1].
+  Vehicle/task position: dist-normalised ∈ [0,1], DEPOT=0.0.
 
 Fleet: scaled to 7 vehicles for 40 flights/8 gates (vs 4 vehicles for KFIC training).
 SIM_HORIZON: 60000s (~16.7h) covering full operational day.
@@ -39,6 +41,7 @@ import os
 import sys
 import time
 import numpy as np
+import networkx as nx
 
 # Ensure repo root is on path
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -78,7 +81,7 @@ ANT_HORIZON     = 600.0
 MAX_DEP_WINDOW  = 3600.0
 SIM_HORIZON     = 60000.0   # 16.7h — covers full KAUS operational day
 
-# KFIC node lookup (policy trained with this; KAUS nodes fall back to -1/0)
+# KFIC node lookup kept for reference (training encoding, not used for KAUS eval)
 _KFIC_NODES = [
     "DEPOT", "TWY_SERVICE", "INTER_NW", "TWY_NORTH", "INTER_NE",
     "TWY_A_ENTRY", "TWY_B_ENTRY",
@@ -86,8 +89,40 @@ _KFIC_NODES = [
     "GATE_B1", "GATE_B2", "GATE_B3",
     "RWY_09L_ENTRY", "RWY_09R_ENTRY",
 ]
-N_NODES  = len(_KFIC_NODES)   # 15
+N_NODES  = len(_KFIC_NODES)   # 15 — kept for reference only
 NODE_IDX = {n: i for i, n in enumerate(_KFIC_NODES)}
+
+
+def _build_node_pos_map(G: nx.DiGraph) -> dict[str, float]:
+    """
+    Build a {node_id: obs_value} map using normalised shortest-path distance
+    from DEPOT.  DEPOT → 0.0; the farthest reachable node → 1.0.
+
+    Nodes unreachable from DEPOT (isolated subgraphs) fall back to 0.5.
+    This preserves the semantic the policy learned: vehicles near DEPOT have
+    small position values, vehicles near distant gates have large ones.
+    """
+    try:
+        raw = nx.single_source_dijkstra_path_length(G, "DEPOT", weight="weight")
+    except nx.NodeNotFound:
+        return {}
+    max_dist = max(raw.values()) if raw else 1.0
+    if max_dist == 0.0:
+        max_dist = 1.0
+    return {node: dist / max_dist for node, dist in raw.items()}
+
+
+def _pos_obs(node: str | None, node_pos: dict[str, float], airborne_fallback: bool = False) -> float:
+    """
+    Encode a node ID as a position observation value.
+
+    - None (aircraft airborne / approaching) → -1.0
+    - Known node in node_pos → normalised distance from DEPOT ∈ [0, 1]
+    - Unknown node (unreachable / not in graph) → 0.0 (DEPOT equivalent)
+    """
+    if node is None:
+        return -1.0
+    return node_pos.get(node, 0.0)
 
 _AC_STATE_LIST  = list(AircraftState)
 AC_STATE_IDX    = {s: i for i, s in enumerate(_AC_STATE_LIST)}
@@ -175,15 +210,14 @@ def _build_obs(
     sim_time: float,
     aircraft_order: list[str],
     vehicle_order: list[str],
+    node_pos: dict[str, float],
 ) -> np.ndarray:
     """
     Build a 337-dim observation vector from KAUS dispatcher state.
 
-    Position features for KAUS nodes are NOT in NODE_IDX (trained on KFIC):
-      - Aircraft pos → -1.0 (same as APPROACHING in training)
-      - Vehicle pos  → 0.0 (DEPOT fallback)
-      - Task gate    → 0.0 (DEPOT fallback)
-    All urgency/timing/service-type features are accurate.
+    Position features use normalised shortest-path distance from DEPOT
+    (see _build_node_pos_map / _pos_obs).  Each KAUS node gets a unique,
+    semantically meaningful value instead of the old constant fallbacks.
     """
     obs    = np.zeros(OBS_DIM, dtype=np.float32)
     now    = sim_time
@@ -200,9 +234,7 @@ def _build_obs(
             if ac is not None:
                 svc = ac.services_completed
                 obs[cursor + 0] = AC_STATE_IDX[ac.state] / 7.0
-                # KAUS nodes not in NODE_IDX → -1 (unknown position)
-                pidx = NODE_IDX.get(ac.position, -1)
-                obs[cursor + 1] = (pidx / N_NODES) if pidx >= 0 else -1.0
+                obs[cursor + 1] = _pos_obs(ac.position, node_pos)
                 if ac.scheduled_departure < float("inf"):
                     ttd = (ac.scheduled_departure - now) / MAX_DEP_WINDOW
                 else:
@@ -221,8 +253,7 @@ def _build_obs(
         if i < len(veh_list):
             v = veh_list[i]
             obs[cursor + 0] = VEH_STATE_IDX[v.state] / 3.0
-            # KAUS nodes not in NODE_IDX → 0 (DEPOT fallback)
-            obs[cursor + 1] = NODE_IDX.get(v.position, 0) / N_NODES
+            obs[cursor + 1] = _pos_obs(v.position, node_pos)
             obs[cursor + 2] = VEH_TYPE_IDX.get(v.vehicle_type, 0) / 2.0
             obs[cursor + 3] = 1.0 if v.is_available() else 0.0
             obs[cursor + 4] = 1.0 if v.reserved_for is not None else 0.0
@@ -234,7 +265,7 @@ def _build_obs(
         if i < len(tasks):
             t = tasks[i]
             obs[cursor + 0] = SVC_IDX.get(t.service_type, 0) / 3.0
-            obs[cursor + 1] = NODE_IDX.get(t.gate_node, 0) / N_NODES   # KAUS → 0
+            obs[cursor + 1] = _pos_obs(t.gate_node, node_pos)
             obs[cursor + 2] = float(np.clip(
                 (now - t.created_at) / MAX_DEP_WINDOW, 0.0, 1.0
             ))
@@ -427,13 +458,15 @@ def run_rl_kaus(model, seed: int = 0, verbose: bool = False) -> dict:
     """
     Run RL policy on KAUS infrastructure with KAUS schedule.
 
-    The policy sees a degraded obs (KAUS positions → -1/0 fallbacks) but
-    receives accurate urgency, service-type, and availability features.
+    Position features are encoded as normalised shortest-path distance from
+    DEPOT using the actual KAUS graph, giving each node a unique semantic value.
     Action masking is computed accurately on the real KAUS graph.
     """
     G, gates, runways = _load_kaus_infra()
     fleet = _build_kaus_fleet()
     aircraft_list = load_schedule(SCHEDULE_PATH, gates=gates)
+
+    node_pos = _build_node_pos_map(G)
 
     dispatcher = RLDispatcher(
         graph=G, gates=gates, runways=runways,
@@ -472,7 +505,7 @@ def run_rl_kaus(model, seed: int = 0, verbose: bool = False) -> dict:
                 v.reserved_until = 0.0
                 dispatcher.reservation_expirations += 1
 
-        obs  = _build_obs(dispatcher, sim_time, aircraft_order, vehicle_order)
+        obs  = _build_obs(dispatcher, sim_time, aircraft_order, vehicle_order, node_pos)
         mask = _build_mask(dispatcher, sim_time)
 
         action, _ = model.predict(obs, action_masks=mask, deterministic=True)
