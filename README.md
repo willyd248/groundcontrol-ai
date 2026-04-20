@@ -41,10 +41,24 @@ The KAUS gap is caused by observation degradation: the policy was trained on KFI
 
 ---
 
-## Side-by-Side Demo
+## Web Dashboard
 
-![FCFS vs RL side-by-side demo](docs/demo_screenshot.png)
-*Screenshot placeholder — run `python -m demo.side_by_side` to see live.*
+A FastAPI dashboard visualises the trained agent's dispatch decisions against FCFS on any random schedule seed.
+
+```bash
+python run_dashboard.py       # http://localhost:8000
+# or:
+python -m uvicorn app.server:app --reload --port 8000
+```
+
+- Pick a seed → click **Run Simulation** → compare FCFS vs RL side-by-side
+- Animated airport diagram shows vehicle movements in real time
+- Decision log lists every RL dispatch choice with target gate and flight
+- Toggle between FCFS and RL timelines; scrub or play at 1×/2×/10× speed
+
+---
+
+## Side-by-Side Pygame Demo
 
 ```
 python -m demo.side_by_side
@@ -57,6 +71,7 @@ The pygame window shows FCFS (left) and the trained agent (right) running in loc
 ## Repo Structure
 
 ```
+app/          FastAPI web dashboard (server.py, simulator.py, static/index.html)
 sim/          Core simulator (dispatcher, entities, world graph, renderer)
 env/          Gymnasium environment wrapping the simulator (MaskablePPO interface)
 train/        PPO training pipeline (train_ppo.py, callbacks, evaluation)
@@ -76,7 +91,8 @@ tests/        148 pytest cases
 | RL algorithm | MaskablePPO (sb3-contrib) |
 | Environment | Gymnasium |
 | Simulation | Pure Python (networkx for taxiway graphs) |
-| Visualization | Pygame |
+| Web dashboard | FastAPI + vanilla JS/SVG |
+| Local visualization | Pygame |
 | Training infra | stable-baselines3, SubprocVecEnv (8 parallel envs) |
 | Airport graph | OpenStreetMap via Overpass API |
 | Schedule data | BTS On-Time Performance |

@@ -6,3 +6,5 @@ stable-baselines3>=2.2
 sb3-contrib>=2.2
 tensorboard>=2.15
 numpy>=1.24
+fastapi>=0.109
+uvicorn>=0.27
